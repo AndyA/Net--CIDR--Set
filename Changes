@@ -36,3 +36,10 @@ Revision history for Set-IntSpan-Fast
         Added clipping option to cardinality, iterate_runs. Thanks to Jeffrey
         Roenfeld for the suggestion.
         Messed around with version numbering some more.
+
+1.10    2007-11-27
+        POD tidying.
+        Added contains_all_range. See 30988. Thanks to Kevin Ryde for
+        the suggestion.
+        Removed version.pm dependency.
+    
