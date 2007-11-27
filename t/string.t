@@ -71,8 +71,9 @@ BEGIN {
 
 for my $test ( @schedule ) {
     my $name = $test->{name};
-    ok my $set  = Set::IntSpan::Fast->new(), "$name: set created OK";
-    ok my $nset = Set::IntSpan::Fast->new(), "$name: second set created OK";
+    ok my $set = Set::IntSpan::Fast->new(), "$name: set created OK";
+    ok my $nset = Set::IntSpan::Fast->new(),
+      "$name: second set created OK";
     my $in  = $test->{in};
     my @opt = ();
     push @opt, $test->{opts} if $test->{opts};
@@ -83,14 +84,15 @@ for my $test ( @schedule ) {
         my $got  = $set->as_string( @opt );
         is $got, $want, "$name: as_string OK";
         $nset->add_from_string( @opt, $want );
-        ok $nset->equals( $set ), "$name: parse output from as_string OK";
+        ok $nset->equals( $set ),
+          "$name: parse output from as_string OK";
     }
     else {
         $set->add_from_string( @opt, $in );
         $nset->add_range( @{ $test->{out} } );
-        unless (ok $nset->equals( $set ), "$name: parse matches") {
+        unless ( ok $nset->equals( $set ), "$name: parse matches" ) {
             diag "expected: ", $nset->as_string, "\n";
-            diag "     got: ", $set->as_string, "\n";
+            diag "     got: ", $set->as_string,  "\n";
         }
         pass "$name: padding" for 1 .. 1;
     }

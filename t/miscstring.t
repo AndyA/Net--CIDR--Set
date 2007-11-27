@@ -5,7 +5,7 @@ use Set::IntSpan::Fast;
 
 ok my $set = Set::IntSpan::Fast->new(), 'create OK';
 
-$set->add_from_string('1,4-5,100-200');
+$set->add_from_string( '1,4-5,100-200' );
 is $set->as_string, '1,4-5,100-200', 'add OK';
-$set->remove_from_string('150-180');
+$set->remove_from_string( '150-180' );
 is $set->as_string, '1,4-5,100-149,181-200', 'remove OK';

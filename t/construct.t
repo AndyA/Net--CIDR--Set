@@ -14,8 +14,8 @@ BEGIN {
         },
         {
             name   => 'String arg',
-            args   => [ '1-10, 20, 30' ],
-            expect => [ 1..10, 20, 30 ],
+            args   => ['1-10, 20, 30'],
+            expect => [ 1 .. 10, 20, 30 ],
         },
         {
             name   => 'Numeric args',
@@ -30,7 +30,8 @@ BEGIN {
 for my $test ( @schedule ) {
     my $name = $test->{name};
     my $args = $test->{args};
-    ok my $set = Set::IntSpan::Fast->new( @$args ), "$name: set created OK";
+    ok my $set = Set::IntSpan::Fast->new( @$args ),
+      "$name: set created OK";
     isa_ok $set, 'Set::IntSpan::Fast';
     my @got = $set->as_array();
     is_deeply \@got, $test->{expect}, "$name: contents OK";

@@ -43,7 +43,8 @@ sub brute_force_card_in_range {
     my $min    = $members[0];
     my $max    = $members[-1];
     my $stride = int( ( $max - $min ) / 5 );
-    for ( my $lo = $min - $stride * 2; $lo <= $max + $stride * 2; $lo++ ) {
+    for ( my $lo = $min - $stride * 2;
+        $lo <= $max + $stride * 2; $lo++ ) {
         $hi = $lo + $stride;
         my $want = brute_force_card_in_range( $lo, $hi, @members );
         my $got = $set->cardinality( $lo, $hi );
@@ -133,13 +134,17 @@ sub brute_force_card_in_range {
     ok( $sets[0]->equals( $sets[1] ), 'empty sets equal' );
     ok( $sets[0]->equals( @sets[ 1 .. 2 ] ), 'three empty sets equal' );
     $sets[0]->add( 0 );
-    ok( !$sets[0]->equals( $sets[1] ),        'sets not equal' );
-    ok( !$sets[0]->equals( @sets[ 1 .. 2 ] ), 'three sets not equal 1' );
-    ok( !$sets[2]->equals( @sets[ 0 .. 1 ] ), 'three sets not equal 2' );
+    ok( !$sets[0]->equals( $sets[1] ), 'sets not equal' );
+    ok( !$sets[0]->equals( @sets[ 1 .. 2 ] ),
+        'three sets not equal 1' );
+    ok( !$sets[2]->equals( @sets[ 0 .. 1 ] ),
+        'three sets not equal 2' );
     ok( !$sets[1]->equals( @sets[ 0, 2 ] ), 'three sets not equal 3' );
     $sets[1]->add( 0 );
-    ok( !$sets[0]->equals( @sets[ 1 .. 2 ] ), 'three sets not equal 4' );
-    ok( !$sets[2]->equals( @sets[ 0 .. 1 ] ), 'three sets not equal 5' );
+    ok( !$sets[0]->equals( @sets[ 1 .. 2 ] ),
+        'three sets not equal 4' );
+    ok( !$sets[2]->equals( @sets[ 0 .. 1 ] ),
+        'three sets not equal 5' );
     ok( !$sets[1]->equals( @sets[ 0, 2 ] ), 'three sets not equal 6' );
     $sets[2]->add( 0 );
     ok( $sets[0]->equals( @sets[ 1 .. 2 ] ), 'three sets equal 1' );
