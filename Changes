@@ -42,4 +42,6 @@ Revision history for Set-IntSpan-Fast
         Added contains_all_range. See 30988. Thanks to Kevin Ryde for
         the suggestion.
         Removed version.pm dependency.
-    
+
+1.11    2007-11-28
+        s/our/use vars/
