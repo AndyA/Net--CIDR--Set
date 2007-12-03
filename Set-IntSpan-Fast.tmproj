@@ -3,7 +3,7 @@
 <plist version="1.0">
 <dict>
 	<key>currentDocument</key>
-	<string>Changes</string>
+	<string>lib/Set/IntSpan/Fast.pm</string>
 	<key>documents</key>
 	<array>
 		<dict>
@@ -28,7 +28,7 @@
 				<key>column</key>
 				<integer>0</integer>
 				<key>line</key>
-				<integer>44</integer>
+				<integer>47</integer>
 			</dict>
 			<key>firstVisibleColumn</key>
 			<integer>0</integer>
@@ -70,7 +70,7 @@
 				<key>column</key>
 				<integer>0</integer>
 				<key>line</key>
-				<integer>18</integer>
+				<integer>21</integer>
 			</dict>
 			<key>firstVisibleColumn</key>
 			<integer>0</integer>
@@ -133,6 +133,20 @@
 			<key>firstVisibleLine</key>
 			<integer>0</integer>
 		</dict>
+		<key>t/string.t</key>
+		<dict>
+			<key>caret</key>
+			<dict>
+				<key>column</key>
+				<integer>0</integer>
+				<key>line</key>
+				<integer>73</integer>
+			</dict>
+			<key>firstVisibleColumn</key>
+			<integer>0</integer>
+			<key>firstVisibleLine</key>
+			<integer>49</integer>
+		</dict>
 	</dict>
 	<key>openDocuments</key>
 	<array>
@@ -143,6 +157,7 @@
 		<string>t/misc.t</string>
 		<string>t/miscstring.t</string>
 		<string>Changes</string>
+		<string>t/string.t</string>
 		<string>t/all-range.t</string>
 	</array>
 	<key>showFileHierarchyDrawer</key>
