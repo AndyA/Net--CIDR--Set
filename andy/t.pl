@@ -2,8 +2,8 @@
 #
 #  t
 #
-#  Created by Andy Armstrong on 2006-12-19.
-#  Copyright (c) 2006 Hexten. All rights reserved.
+#  Created by Andy Armstrong on 2008-12-19.
+#  Copyright (c) 2008 Hexten. All rights reserved.
 
 use strict;
 use lib qw(lib);
