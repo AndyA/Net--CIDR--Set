@@ -209,7 +209,6 @@ sub add_range {
     _iterate_ranges(
         @_,
         sub {
-            local *__ANON__ = "add_range::callback";
             my ( $from, $to ) = @_;
 
             my $fpos = $self->_find_pos( $from );
