@@ -12,12 +12,12 @@ Set::IntSpan::Fast - Fast handling of sets containing integer spans.
 
 =head1 VERSION
 
-This document describes Set::IntSpan::Fast version 1.11
+This document describes Set::IntSpan::Fast version 1.12
 
 =cut
 
 use vars qw( $VERSION );
-$VERSION = '1.11';
+$VERSION = '1.12';
 
 =head1 SYNOPSIS
 
@@ -159,8 +159,11 @@ Return an identical copy of the set.
 =cut
 
 sub copy {
-    my $self = shift;
-    my $copy = Set::IntSpan::Fast->new();
+    my $self  = shift;
+    my $class = ref $self;
+    my $copy  = $class->new();
+    # This might not work for subclasses - in which case they should
+    # override copy
     @$copy = @$self;
     return $copy;
 }
@@ -382,8 +385,10 @@ or as a function:
 =cut
 
 sub union {
-    my $new = Set::IntSpan::Fast->new();
-    $new->merge( @_ );
+    my $self  = shift;
+    my $class = ref $self;
+    my $new   = $class->new();
+    $new->merge( $self, @_ );
     return $new;
 }
 
@@ -401,8 +406,10 @@ or as a function:
 =cut
 
 sub intersection {
-    my $new = Set::IntSpan::Fast->new();
-    $new->merge( map { $_->complement() } @_ );
+    my $self  = shift;
+    my $class = ref $self;
+    my $new   = $class->new();
+    $new->merge( map { $_->complement() } $self, @_ );
     $new->invert();
     return $new;
 }

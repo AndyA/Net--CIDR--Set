@@ -45,3 +45,6 @@ Revision history for Set-IntSpan-Fast
 
 1.11    2007-11-28
         s/our/use vars/
+
+1.12    2008-06-24
+        Made subclasses work properly.
