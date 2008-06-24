@@ -6,10 +6,4 @@ plan skip_all =>
   "Test::Pod::Coverage 1.04 required for testing POD coverage"
   if $@;
 all_pod_coverage_ok(
-    {
-        private => [
-            qr{^BUILD|DEMOLISH|AUTOMETHOD|START$}, qr{^_},
-            qr{compliment}
-        ]
-    }
-);
+    { private => [ qr{^bootstrap$}, qr{^_}, qr{compliment} ] } );

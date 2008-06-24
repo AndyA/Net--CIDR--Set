@@ -70,7 +70,7 @@ sub brute_force_card_in_range {
         $_->merge( $first );
     }
 
-    my $inter = Set::IntSpan::Fast::intersection( @sets );
+    my $inter = $sets[0]->intersection( @sets[ 1 .. $#sets ] );
 
     my @common = $inter->as_array();
     my @first  = $first->as_array();
@@ -112,10 +112,10 @@ sub brute_force_card_in_range {
         push @sets, $s;
     }
 
-    ok( Set::IntSpan::Fast::equals( @sets ), 'equal' );
+    ok( $sets[0]->equals( @sets[ 1 .. $#sets ] ), 'equal' );
     for ( 0 .. 3 ) {
         $sets[$_]->add( 6 );
-        my $eq = Set::IntSpan::Fast::equals( @sets );
+        my $eq = $sets[0]->equals( @sets[ 1 .. $#sets ] );
         $eq = !$eq unless $_ == 3;
         ok( $eq, "equal $_" );
     }
@@ -126,12 +126,12 @@ sub brute_force_card_in_range {
 
     $sets[0]->add( 11 );
     ok( $sets[0]->superset( $sets[1] ), 'superset bigger' );
-    ok( !$sets[0]->subset( $sets[1] ), 'subset bigger' );
+    ok( !$sets[0]->subset( $sets[1] ),  'subset bigger' );
 }
 
 {
     my @sets = map { Set::IntSpan::Fast->new(); } ( 1 .. 3 );
-    ok( $sets[0]->equals( $sets[1] ), 'empty sets equal' );
+    ok( $sets[0]->equals( $sets[1] ),        'empty sets equal' );
     ok( $sets[0]->equals( @sets[ 1 .. 2 ] ), 'three empty sets equal' );
     $sets[0]->add( 0 );
     ok( !$sets[0]->equals( $sets[1] ), 'sets not equal' );
