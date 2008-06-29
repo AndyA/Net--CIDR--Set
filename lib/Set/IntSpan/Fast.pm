@@ -252,7 +252,7 @@ option may be either a regular expression or a literal string.
         '1::3::5:7...11:19..27'
     );
 
-And embedded whitespace in the string will be ignored.
+Any embedded whitespace in the string will be ignored.
 
 =cut
 
