@@ -1,5 +1,6 @@
 Changes
 lib/Set/IntSpan/Fast.pm
+lib/Set/IntSpan/Fast/PP.pm
 Makefile.PL
 MANIFEST
 README
@@ -9,6 +10,5 @@ t/basic.t
 t/construct.t
 t/misc.t
 t/miscstring.t
-t/pod-coverage.t
 t/pod.t
 t/string.t

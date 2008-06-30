@@ -48,3 +48,7 @@ Revision history for Set-IntSpan-Fast
 
 1.12    2008-06-24
         Made subclasses work properly.
+
+1.13    2008-07-01
+        Moved implementation into ::PP and made @ISA dynamic so ::XS is
+        automatically used if available.

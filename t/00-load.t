@@ -5,3 +5,4 @@ BEGIN {
 }
 
 diag( "Testing Set::IntSpan::Fast $Set::IntSpan::Fast::VERSION" );
+diag( "ISA @Set::IntSpan::Fast::ISA" );

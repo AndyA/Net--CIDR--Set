@@ -16,8 +16,27 @@ This document describes Set::IntSpan::Fast version 1.13
 
 =cut
 
-use vars qw( $VERSION );
-$VERSION = '1.13';
+BEGIN {
+    our $VERSION = '1.13';
+    our @ISA;
+    eval "use Set::IntSpan::Fast::XS";
+    if ( $@ ) {
+        if ( $@ =~ /^Can't\s+locate/ ) {
+            eval "use Set::IntSpan::Fast::PP";
+            die $@ if $@;
+            @ISA = qw( Set::IntSpan::Fast::PP );
+        }
+        else {
+            die $@;
+        }
+    }
+    else {
+        @ISA = qw( Set::IntSpan::Fast::XS );
+    }
+}
+
+1;
+__END__
 
 =head1 SYNOPSIS
 
@@ -78,12 +97,13 @@ ranges in order and uses a binary search for many internal operations
 so that overall performance tends towards O log N where N is the number
 of ranges.
 
+=head2 C<Set::IntSpan::Fast::XS>
+
+If L<Set::IntSpan::Fast::XS> is installed it will automatically be used
+when a new C<Set::IntSpan::Fast> is created. There is no need to change
+any code; the XS module is automatically detected and loaded.
+
 =head1 INTERFACE
-
-=cut
-
-use constant POSITIVE_INFINITY => 2**31 - 2;
-use constant NEGATIVE_INFINITY => -2**31 + 100;
 
 =head2 C<new>
 
@@ -101,15 +121,6 @@ Bear in mind though that this validates each element of the array is it
 would if you called C<add_from_string> so for large sets it will be
 slightly more efficient to create an empty set and then call C<add>.
 
-=cut
-
-sub new {
-    my $class = shift;
-    my $self = bless [], $class;
-    $self->add_from_string( @_ ) if @_;
-    return $self;
-}
-
 =head2 C<invert>
 
 Complement the set. Because our notion of infinity is actually
@@ -119,36 +130,6 @@ integers between C<NEGATIVE_INFINITY> and C<POSITIVE_INFINITY> inclusive.
 
 As noted above C<NEGATIVE_INFINITY> and C<POSITIVE_INFINITY> are actually just
 big integers.
-
-=cut
-
-sub invert {
-    my $self = shift;
-
-    if ( $self->is_empty() ) {
-
-        # Empty set
-        @$self = ( NEGATIVE_INFINITY, POSITIVE_INFINITY );
-    }
-    else {
-
-        # Either add or remove infinity from each end. The net
-        # effect is always an even number of additions and deletions
-        if ( $self->[0] == NEGATIVE_INFINITY ) {
-            shift @{$self};
-        }
-        else {
-            unshift @{$self}, NEGATIVE_INFINITY;
-        }
-
-        if ( $self->[-1] == POSITIVE_INFINITY ) {
-            pop @{$self};
-        }
-        else {
-            push @{$self}, POSITIVE_INFINITY;
-        }
-    }
-}
 
 =head2 C<copy>
 
@@ -175,24 +156,10 @@ specified in any order. All arguments must be integers between
 C<Set::IntSpan::NEGATIVE_INFINITY> and C<Set::IntSpan::POSITIVE_INFINITY>
 inclusive.
 
-=cut
-
-sub add {
-    my $self = shift;
-    $self->add_range( $self->_list_to_ranges( @_ ) );
-}
-
 =head2 C<remove( $number ... )>
 
 Remove the specified integers from the set. It is not an error to remove
 non-members. Any number of arguments may be specified.
-
-=cut
-
-sub remove {
-    my $self = shift;
-    $self->remove_range( $self->_list_to_ranges( @_ ) );
-}
 
 =head2 C<add_range( $from, $to )>
 
@@ -203,27 +170,6 @@ specified:
 
 Each pair of arguments constitute a range. The second argument in each
 pair must be greater than or equal to the first.
-
-=cut
-
-sub add_range {
-    my $self = shift;
-
-    $self->_iterate_ranges(
-        @_,
-        sub {
-            my ( $from, $to ) = @_;
-
-            my $fpos = $self->_find_pos( $from );
-            my $tpos = $self->_find_pos( $to + 1, $fpos );
-
-            $from = $self->[ --$fpos ] if ( $fpos & 1 );
-            $to   = $self->[ $tpos++ ] if ( $tpos & 1 );
-
-            splice @$self, $fpos, $tpos - $fpos, ( $from, $to );
-        }
-    );
-}
 
 =head2 C<add_from_string( $string )>
 
@@ -254,49 +200,6 @@ option may be either a regular expression or a literal string.
 
 Any embedded whitespace in the string will be ignored.
 
-=cut
-
-sub add_from_string {
-    my $self = shift;
-
-    my $ctl          = {};
-    my $match_number = qr/\s* (-?\d+) \s*/x;
-    my $match_single = qr/^ $match_number $/x;
-    my $match_range;
-
-    my @to_add = ();
-
-    # Iterate args. Default punctuation spec prepended.
-    for my $el ( { sep => qr/,/, range => qr/-/, }, @_ ) {
-
-        # Allow parsing options to be set.
-        if ( 'HASH' eq ref $el ) {
-            %$ctl = ( %$ctl, %$el );
-            for ( values %$ctl ) {
-                $_ = quotemeta( $_ ) unless ref $_ eq 'Regexp';
-            }
-            $match_range
-              = qr/^ $match_number $ctl->{range} $match_number $/x;
-        }
-        else {
-            for my $part ( split $ctl->{sep}, $el ) {
-                if ( my ( $start, $end ) = ( $part =~ $match_range ) ) {
-                    push @to_add, $start, $end;
-                }
-                elsif ( my ( $el ) = ( $part =~ $match_single ) ) {
-                    push @to_add, $el, $el;
-                }
-                else {
-                    croak "Invalid range string"
-                      unless $part =~ $match_single;
-                }
-            }
-        }
-    }
-
-    $self->add_range( @to_add );
-}
-
 =head2 C<remove_range( $from, $to )>
 
 Remove the inclusive range of integers from the set. Multiple ranges may
@@ -307,49 +210,16 @@ be specified:
 Each pair of arguments constitute a range. The second argument in each
 pair must be greater than or equal to the first.
 
-=cut
-
-sub remove_range {
-    my $self = shift;
-
-    $self->invert();
-    $self->add_range( @_ );
-    $self->invert();
-}
-
 =head2 C<remove_from_string( $string )>
 
 Remove items to a set from a string representation, of the same form as
 C<as_string>. As with C<add_from_string> the punctuation characters may
 be specified.
 
-=cut
-
-sub remove_from_string {
-    my $self = shift;
-
-    $self->invert();
-    $self->add_from_string( @_ );
-    $self->invert();
-}
-
 =head2 C<merge( $set ... )>
 
 Merge the members of the supplied sets into this set. Any number of sets
 may be supplied as arguments.
-
-=cut
-
-sub merge {
-    my $self = shift;
-
-    for my $other ( @_ ) {
-        my $iter = $other->iterate_runs();
-        while ( my ( $from, $to ) = $iter->() ) {
-            $self->add_range( $from, $to );
-        }
-    }
-}
 
 =head2 Operators
 
@@ -358,33 +228,12 @@ sub merge {
 Returns a new set that is the complement of this set. See the comments
 about our definition of infinity above.
 
-=cut
-
-sub compliment {
-    croak
-      "That's very kind of you - but I expect you meant complement()";
-}
-
-sub complement {
-    my $new = shift->copy();
-    $new->invert();
-    return $new;
-}
-
 =head3 C<union( $set ... )>
 
 Return a new set that is the union of this set and all of the supplied
 sets.
 
     $un = $set->union( $other_set );
-
-=cut
-
-sub union {
-    my $new = shift->copy;
-    $new->merge( @_ );
-    return $new;
-}
 
 =head3 C<intersection( $set )>
 
@@ -393,17 +242,6 @@ sets.
 
     $in = $set->intersection( $other_set );
 
-=cut
-
-sub intersection {
-    my $self  = shift;
-    my $class = ref $self;
-    my $new   = $class->new();
-    $new->merge( map { $_->complement() } $self, @_ );
-    $new->invert();
-    return $new;
-}
-
 =head3 C<xor( $set )>
 
 Return a new set that contains all of the members that are in this set
@@ -411,26 +249,10 @@ or the supplied set but not both. Can actually handle more than two sets
 in which case it returns a set that contains all the members that are in
 some of the sets but not all of the sets.
 
-=cut
-
-sub xor {
-    my $self = shift;
-    return $self->union( @_ )
-      ->intersection( $self->intersection( @_ )->complement() );
-}
-
 =head3 C<diff( $set )>
 
 Return a set containing all the elements that are in this set but not the
 supplied set.
-
-=cut
-
-sub diff {
-    my $self  = shift;
-    my $other = shift;
-    return $self->intersection( $other->union( @_ )->complement() );
-}
 
 =head2 Tests
 
@@ -438,89 +260,27 @@ sub diff {
 
 Return true if the set is empty.
 
-=cut
-
-sub is_empty {
-    my $self = shift;
-    return @$self == 0;
-}
-
 =head3 C<contains( $number )>
 
 Return true if the specified number is contained in the set.
-
-=cut
-
-*contains = *contains_all;
 
 =head3 C<contains_any($number, $number, $number ...)>
 
 Return true if the set contains any of the specified numbers.
 
-=cut
-
-sub contains_any {
-    my $self = shift;
-
-    for my $i ( @_ ) {
-        my $pos = $self->_find_pos( $i + 1 );
-        return 1 if $pos & 1;
-    }
-
-    return;
-}
-
 =head3 C<contains_all($number, $number, $number ...)>
 
 Return true if the set contains all of the specified numbers.
-
-=cut
-
-sub contains_all {
-    my $self = shift;
-
-    for my $i ( @_ ) {
-        my $pos = $self->_find_pos( $i + 1 );
-        return unless $pos & 1;
-    }
-
-    return 1;
-}
 
 =head3 C<contains_all_range( $low, $high )>
 
 Return true if all the numbers in the range C<$low> to C<$high> (inclusive)
 are in the set.
 
-=cut
-
-sub contains_all_range {
-    my ( $self, $lo, $hi ) = @_;
-
-    croak "Range limits must be in ascending order" if $lo > $hi;
-
-    my $pos = $self->_find_pos( $lo + 1 );
-    return ( $pos & 1 ) && $hi < $self->[$pos];
-}
-
 =head3 C<cardinality( [ $clip_lo, $clip_hi ] )>
 
 Returns the number of members in the set. If a clipping range is supplied
 return the count of members that fall within that inclusive range.
-
-=cut
-
-sub cardinality {
-    my $self = shift;
-
-    my $card = 0;
-    my $iter = $self->iterate_runs( @_ );
-    while ( my ( $from, $to ) = $iter->() ) {
-        $card += $to - $from + 1;
-    }
-
-    return $card;
-}
 
 =head3 C<superset( $set )>
 
@@ -531,13 +291,6 @@ always a superset of itself, or in other words
     
 returns true.
 
-=cut
-
-sub superset {
-    my $other = pop;
-    return $other->subset( reverse( @_ ) );
-}
-
 =head3 C<subset( $set )>
 
 Returns true if this set is a subset of the supplied set. A set is
@@ -547,67 +300,15 @@ always a subset of itself, or in other words
     
 returns true.
 
-=cut
-
-sub subset {
-    my $self = shift;
-    my $other = shift || croak "I need two sets to compare";
-    return $self->equals( $self->intersection( $other ) );
-}
-
 =head3 C<equals( $set )>
 
 Returns true if this set is identical to the supplied set.
 
-=cut
-
-sub equals {
-    return unless @_;
-
-    # Array of array refs
-    my @edges = @_;
-    my $medge = scalar( @edges ) - 1;
-
-    POS: for ( my $pos = 0;; $pos++ ) {
-        my $v = $edges[0]->[$pos];
-        if ( defined( $v ) ) {
-            for ( @edges[ 1 .. $medge ] ) {
-                my $vv = $_->[$pos];
-                return unless defined( $vv ) && $vv == $v;
-            }
-        }
-        else {
-            for ( @edges[ 1 .. $medge ] ) {
-                return if defined $_->[$pos];
-            }
-        }
-
-        last POS unless defined( $v );
-    }
-
-    return 1;
-}
-
 =head2 Getting set contents
-
-=cut
 
 =head3 C<as_array>
 
 Return an array containing all the members of the set in ascending order.
-
-=cut
-
-sub as_array {
-    my $self = shift;
-    my @ar   = ();
-    my $iter = $self->iterate_runs();
-    while ( my ( $from, $to ) = $iter->() ) {
-        push @ar, ( $from .. $to );
-    }
-
-    return @ar;
-}
 
 =head3 C<as_string>
 
@@ -622,21 +323,6 @@ You may optionally supply a hash containing C<sep> and C<range> options:
 
     print $set->as_string({ sep => ';', range => '*' ), "\n";
         # prints 1;3;5;7;9;100*1000000
-
-=cut
-
-sub as_string {
-    my $self = shift;
-    my $ctl = { sep => ',', range => '-' };
-    %$ctl = ( %$ctl, %{ $_[0] } ) if @_;
-    my $iter = $self->iterate_runs();
-    my @runs = ();
-    while ( my ( $from, $to ) = $iter->() ) {
-        push @runs,
-          $from == $to ? $from : join( $ctl->{range}, $from, $to );
-    }
-    return join( $ctl->{sep}, @runs );
-}
 
 =head3 C<iterate_runs( [ $clip_lo, $clip_hi ] )>
 
@@ -653,124 +339,6 @@ like this:
 
 If a clipping range is specified only those members that fall within
 the range will be returned.
-
-=cut
-
-sub iterate_runs {
-    my $self = shift;
-
-    if ( @_ ) {
-
-        # Clipped iterator
-        my ( $clip_lo, $clip_hi ) = @_;
-
-        my $pos = $self->_find_pos( $clip_lo ) & ~1;
-        my $limit = ( $self->_find_pos( $clip_hi + 1, $pos ) + 1 ) & ~1;
-
-        return sub {
-            TRY: {
-                return if $pos >= $limit;
-
-                my @r = ( $self->[$pos], $self->[ $pos + 1 ] - 1 );
-                $pos += 2;
-
-                # Catch some edge cases
-                redo TRY if $r[1] < $clip_lo;
-                return   if $r[0] > $clip_hi;
-
-                # Clip to range
-                $r[0] = $clip_lo if $r[0] < $clip_lo;
-                $r[1] = $clip_hi if $r[1] > $clip_hi;
-
-                return @r;
-            }
-        };
-    }
-    else {
-
-        # Unclipped iterator
-        my $pos   = 0;
-        my $limit = scalar( @$self );
-
-        return sub {
-            return if $pos >= $limit;
-            my @r = ( $self->[$pos], $self->[ $pos + 1 ] - 1 );
-            $pos += 2;
-            return @r;
-        };
-    }
-
-}
-
-sub _list_to_ranges {
-    my $self   = shift;
-    my @list   = sort { $a <=> $b } @_;
-    my @ranges = ();
-    my $count  = scalar( @list );
-    my $pos    = 0;
-    while ( $pos < $count ) {
-        my $end = $pos + 1;
-        $end++
-          while $end < $count && $list[$end] <= $list[ $end - 1 ] + 1;
-        push @ranges, ( $list[$pos], $list[ $end - 1 ] );
-        $pos = $end;
-    }
-
-    return @ranges;
-}
-
-# Return the index of the first element >= the supplied value. If the
-# supplied value is larger than any element in the list the returned
-# value will be equal to the size of the list.
-sub _find_pos {
-    my $self = shift;
-    my $val  = shift;
-    my $low  = shift || 0;
-
-    my $high = scalar( @$self );
-
-    while ( $low < $high ) {
-        my $mid = int( ( $low + $high ) / 2 );
-        if ( $val < $self->[$mid] ) {
-            $high = $mid;
-        }
-        elsif ( $val > $self->[$mid] ) {
-            $low = $mid + 1;
-        }
-        else {
-            return $mid;
-        }
-    }
-
-    return $low;
-}
-
-sub _iterate_ranges {
-    my $self = shift;
-    my $cb   = pop;
-
-    my $count = scalar( @_ );
-
-    croak "Range list must have an even number of elements"
-      if ( $count % 2 ) != 0;
-
-    for ( my $p = 0; $p < $count; $p += 2 ) {
-        my ( $from, $to ) = ( $_[$p], $_[ $p + 1 ] );
-        croak "Range limits must be integers"
-          unless is_int( $from ) && is_int( $to );
-        croak "Range limits must be in ascending order"
-          unless $from <= $to;
-        croak "Value out of range"
-          unless $from >= NEGATIVE_INFINITY && $to <= POSITIVE_INFINITY;
-
-        # Internally we store inclusive/exclusive ranges to
-        # simplify comparisons, hence '$to + 1'
-        $cb->( $from, $to + 1 );
-    }
-}
-
-1;
-__END__
 
 =head2 Constants
 
@@ -823,7 +391,6 @@ or as a method:
 =head3 C<< Invalid Range String >>
 
 The range string must only contain a comma separated list of ranges, with a hyphen used as the range limit separator. e.g. "1,5,8-12,15-29".
-
 
 =head1 CONFIGURATION AND ENVIRONMENT
 
