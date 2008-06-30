@@ -12,12 +12,12 @@ Set::IntSpan::Fast - Fast handling of sets containing integer spans.
 
 =head1 VERSION
 
-This document describes Set::IntSpan::Fast version 1.13
+This document describes Set::IntSpan::Fast version 1.14
 
 =cut
 
 BEGIN {
-    our $VERSION = '1.13';
+    our $VERSION = '1.14';
     our @ISA;
     eval "use Set::IntSpan::Fast::XS";
     if ( $@ ) {

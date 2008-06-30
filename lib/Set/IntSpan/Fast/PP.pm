@@ -12,11 +12,11 @@ Set::IntSpan::Fast::PP - Pure Perl implementation.
 
 =head1 VERSION
 
-This document describes Set::IntSpan::Fast::PP version 1.13
+This document describes Set::IntSpan::Fast::PP version 1.14
 
 =cut
 
-our $VERSION = '1.13';
+our $VERSION = '1.14';
 
 use constant POSITIVE_INFINITY => 2**31 - 2;
 use constant NEGATIVE_INFINITY => -2**31 + 100;
