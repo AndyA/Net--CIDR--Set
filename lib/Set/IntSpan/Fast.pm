@@ -12,17 +12,17 @@ Set::IntSpan::Fast - Fast handling of sets containing integer spans.
 
 =head1 VERSION
 
-This document describes Set::IntSpan::Fast version 1.14
+This document describes Set::IntSpan::Fast version 1.15
 
 =cut
 
 BEGIN {
-    our $VERSION = '1.14';
+    our $VERSION = '1.15';
     our @ISA;
-    eval "use Set::IntSpan::Fast::XS";
+    eval "use Set::IntSpan::Fast::XS ()";
     if ( $@ ) {
         if ( $@ =~ /^Can't\s+locate/ ) {
-            eval "use Set::IntSpan::Fast::PP";
+            eval "use Set::IntSpan::Fast::PP ()";
             die $@ if $@;
             @ISA = qw( Set::IntSpan::Fast::PP );
         }
@@ -102,6 +102,9 @@ of ranges.
 If L<Set::IntSpan::Fast::XS> is installed it will automatically be used
 when a new C<Set::IntSpan::Fast> is created. There is no need to change
 any code; the XS module is automatically detected and loaded.
+
+If you have a C compiler consider installing C<Set::IntSpan::Fast::XS>
+for even better performance.
 
 =head1 INTERFACE
 

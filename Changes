@@ -52,3 +52,6 @@ Revision history for Set-IntSpan-Fast
 1.13    2008-07-01
         Moved implementation into ::PP and made @ISA dynamic so ::XS is
         automatically used if available.
+
+1.14    2008-07-01
+        Improved test coverage when ::XS is already installed

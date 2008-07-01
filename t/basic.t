@@ -1,8 +1,7 @@
-use Test::More tests => 6063;
+use Test::More tests => 12128;
 
-BEGIN {
-    use_ok( 'Set::IntSpan::Fast' );
-}
+use Set::IntSpan::Fast;
+use Set::IntSpan::Fast::PP;
 
 # Basic hash based set for testing
 
@@ -47,7 +46,7 @@ sub as_array_ref {
 
 # Extend Set::IntSpace::Fast
 
-package Set::IntSpan::Fast;
+package Set::IntSpan::Fast::PP;
 
 sub as_array_ref {
     my $self = shift;
@@ -75,125 +74,134 @@ sub is_sane {
 
 package main;
 
-# Simple cases - two ranges overlapping in various ways
-for my $i ( -5 .. 5 ) {
-    for my $j ( $i .. 5 ) {
-        my @set = ( Set::IntSpan::Fast->new(), TestSet->new() );
-        $_->add_range( -2, 2 ) for @set;
-        is_deeply(
-            $set[0]->as_array_ref(),
-            $set[1]->as_array_ref(),
-            "add init range"
-        );
-        $_->add_range( $i, $j ) for @set;
-        is_deeply(
-            $set[0]->as_array_ref(),
-            $set[1]->as_array_ref(),
-            "add $i to $j"
-        );
-        is( $set[0]->is_sane(), 0, "sanity check" );
+for my $class ( qw( Set::IntSpan::Fast Set::IntSpan::Fast::PP ) ) {
+
+    {
+        my $set = $class->new;
+        isa_ok $set, 'Set::IntSpan::Fast::PP';
+        isa_ok $set, $class;
     }
-}
 
-# More complex cases - multiple overlaps
-for my $i ( -20 .. 20 ) {
-    for my $j ( $i .. 20 ) {
-        my @set = ( Set::IntSpan::Fast->new(), TestSet->new() );
-        for my $s ( @set ) {
-            my $gap = 0;
-            my $pos = -18;
-            while ( $pos < 18 ) {
-                $s->add_range( $pos, $pos + $gap );
-                $pos += $gap * 2;
-                $gap++;
-            }
-
-            # Half the time add an extra element
-            if ( $j & 1 ) {
-                $s->add_range( $pos, $pos );
-            }
+    # Simple cases - two ranges overlapping in various ways
+    for my $i ( -5 .. 5 ) {
+        for my $j ( $i .. 5 ) {
+            my @set = ( $class->new(), TestSet->new() );
+            $_->add_range( -2, 2 ) for @set;
+            is_deeply(
+                $set[0]->as_array_ref(),
+                $set[1]->as_array_ref(),
+                "add init range"
+            );
+            $_->add_range( $i, $j ) for @set;
+            is_deeply(
+                $set[0]->as_array_ref(),
+                $set[1]->as_array_ref(),
+                "add $i to $j"
+            );
+            is( $set[0]->is_sane(), 0, "sanity check" );
         }
-        is_deeply(
-            $set[0]->as_array_ref(),
-            $set[1]->as_array_ref(),
-            "add init range"
-        );
-        $_->add_range( $i, $j ) for @set;
-        is_deeply(
-            $set[0]->as_array_ref(),
-            $set[1]->as_array_ref(),
-            "add $i to $j"
-        );
-        is( $set[0]->is_sane(), 0, "sanity check" );
     }
-}
 
-# Simple cases - two ranges overlapping in various ways
-for my $i ( -5 .. 5 ) {
-    for my $j ( $i .. 5 ) {
-        my @set = ( Set::IntSpan::Fast->new(), TestSet->new() );
-        $_->add_range( -2, 2 ) for @set;
-        is_deeply(
-            $set[0]->as_array_ref(),
-            $set[1]->as_array_ref(),
-            "add init range"
-        );
-        $_->remove_range( $i, $j ) for @set;
-        is_deeply(
-            $set[0]->as_array_ref(),
-            $set[1]->as_array_ref(),
-            "remove $i to $j"
-        );
-        is( $set[0]->is_sane(), 0, "sanity check" );
-    }
-}
+    # More complex cases - multiple overlaps
+    for my $i ( -20 .. 20 ) {
+        for my $j ( $i .. 20 ) {
+            my @set = ( $class->new(), TestSet->new() );
+            for my $s ( @set ) {
+                my $gap = 0;
+                my $pos = -18;
+                while ( $pos < 18 ) {
+                    $s->add_range( $pos, $pos + $gap );
+                    $pos += $gap * 2;
+                    $gap++;
+                }
 
-# More complex cases - multiple overlaps
-for my $i ( -20 .. 20 ) {
-    for my $j ( $i .. 20 ) {
-        my @set = ( Set::IntSpan::Fast->new(), TestSet->new() );
-        for my $s ( @set ) {
-            my $gap = 0;
-            my $pos = -18;
-            while ( $pos < 18 ) {
-                $s->add_range( $pos, $pos + $gap );
-                $pos += $gap * 2;
-                $gap++;
+                # Half the time add an extra element
+                if ( $j & 1 ) {
+                    $s->add_range( $pos, $pos );
+                }
             }
-
-            # Half the time add an extra element
-            if ( $j & 1 ) {
-                $s->add_range( $pos, $pos );
-            }
+            is_deeply(
+                $set[0]->as_array_ref(),
+                $set[1]->as_array_ref(),
+                "add init range"
+            );
+            $_->add_range( $i, $j ) for @set;
+            is_deeply(
+                $set[0]->as_array_ref(),
+                $set[1]->as_array_ref(),
+                "add $i to $j"
+            );
+            is( $set[0]->is_sane(), 0, "sanity check" );
         }
-        is_deeply(
-            $set[0]->as_array_ref(),
-            $set[1]->as_array_ref(),
-            "add init range"
-        );
-        $_->remove_range( $i, $j ) for @set;
-        is_deeply(
-            $set[0]->as_array_ref(),
-            $set[1]->as_array_ref(),
-            "remove $i to $j"
-        );
-        is( $set[0]->is_sane(), 0, "sanity check" );
     }
-}
 
-# Some psuedorandom cases
-srand( 1 );
-for ( 1 .. 500 ) {
-    my @set = ( Set::IntSpan::Fast->new(), TestSet->new() );
-    my @add = map { ( $_, $_ + int( rand( 10 ) ) ) }
-      map { int( rand( 10 ) ) } ( 1 .. int( rand( 17 ) ) );
-    my @rem = map { ( $_, $_ + int( rand( 10 ) ) ) }
-      map { int( rand( 10 ) ) } ( 1 .. int( rand( 17 ) ) );
-    $_->add_range( @add )    for @set;
-    $_->remove_range( @rem ) for @set;
-    is_deeply(
-        $set[0]->as_array_ref(),
-        $set[1]->as_array_ref(),
-        "random ranges"
-    );
+    # Simple cases - two ranges overlapping in various ways
+    for my $i ( -5 .. 5 ) {
+        for my $j ( $i .. 5 ) {
+            my @set = ( $class->new(), TestSet->new() );
+            $_->add_range( -2, 2 ) for @set;
+            is_deeply(
+                $set[0]->as_array_ref(),
+                $set[1]->as_array_ref(),
+                "add init range"
+            );
+            $_->remove_range( $i, $j ) for @set;
+            is_deeply(
+                $set[0]->as_array_ref(),
+                $set[1]->as_array_ref(),
+                "remove $i to $j"
+            );
+            is( $set[0]->is_sane(), 0, "sanity check" );
+        }
+    }
+
+    # More complex cases - multiple overlaps
+    for my $i ( -20 .. 20 ) {
+        for my $j ( $i .. 20 ) {
+            my @set = ( $class->new(), TestSet->new() );
+            for my $s ( @set ) {
+                my $gap = 0;
+                my $pos = -18;
+                while ( $pos < 18 ) {
+                    $s->add_range( $pos, $pos + $gap );
+                    $pos += $gap * 2;
+                    $gap++;
+                }
+
+                # Half the time add an extra element
+                if ( $j & 1 ) {
+                    $s->add_range( $pos, $pos );
+                }
+            }
+            is_deeply(
+                $set[0]->as_array_ref(),
+                $set[1]->as_array_ref(),
+                "add init range"
+            );
+            $_->remove_range( $i, $j ) for @set;
+            is_deeply(
+                $set[0]->as_array_ref(),
+                $set[1]->as_array_ref(),
+                "remove $i to $j"
+            );
+            is( $set[0]->is_sane(), 0, "sanity check" );
+        }
+    }
+
+    # Some psuedorandom cases
+    srand( 1 );
+    for ( 1 .. 500 ) {
+        my @set = ( $class->new(), TestSet->new() );
+        my @add = map { ( $_, $_ + int( rand( 10 ) ) ) }
+          map { int( rand( 10 ) ) } ( 1 .. int( rand( 17 ) ) );
+        my @rem = map { ( $_, $_ + int( rand( 10 ) ) ) }
+          map { int( rand( 10 ) ) } ( 1 .. int( rand( 17 ) ) );
+        $_->add_range( @add )    for @set;
+        $_->remove_range( @rem ) for @set;
+        is_deeply(
+            $set[0]->as_array_ref(),
+            $set[1]->as_array_ref(),
+            "random ranges"
+        );
+    }
 }
