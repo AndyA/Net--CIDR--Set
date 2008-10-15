@@ -17,22 +17,22 @@ This document describes Set::IntSpan::Fast version 1.15
 =cut
 
 BEGIN {
-    our $VERSION = '1.15';
-    our @ISA;
-    eval "use Set::IntSpan::Fast::XS ()";
-    if ( $@ ) {
-        if ( $@ =~ /^Can't\s+locate/ ) {
-            eval "use Set::IntSpan::Fast::PP ()";
-            die $@ if $@;
-            @ISA = qw( Set::IntSpan::Fast::PP );
-        }
-        else {
-            die $@;
-        }
+  our $VERSION = '1.15';
+  our @ISA;
+  eval "use Set::IntSpan::Fast::XS ()";
+  if ( $@ ) {
+    if ( $@ =~ /^Can't\s+locate/ ) {
+      eval "use Set::IntSpan::Fast::PP ()";
+      die $@ if $@;
+      @ISA = qw( Set::IntSpan::Fast::PP );
     }
     else {
-        @ISA = qw( Set::IntSpan::Fast::XS );
+      die $@;
     }
+  }
+  else {
+    @ISA = qw( Set::IntSpan::Fast::XS );
+  }
 }
 
 1;
