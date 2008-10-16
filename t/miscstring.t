@@ -1,9 +1,9 @@
 use strict;
 use warnings;
 use Test::More tests => 3;
-use Set::IntSpan::Fast;
+use Net::CIDR::Set;
 
-ok my $set = Set::IntSpan::Fast->new(), 'create OK';
+ok my $set = Net::CIDR::Set->new(), 'create OK';
 
 $set->add_from_string( '1,4-5,100-200' );
 is $set->as_string, '1,4-5,100-200', 'add OK';

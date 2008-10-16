@@ -1,4 +1,4 @@
-package Set::IntSpan::Fast::PP;
+package Net::CIDR::Set::PP;
 
 use warnings;
 use strict;
@@ -8,11 +8,11 @@ use List::Util qw(min max);
 
 =head1 NAME
 
-Set::IntSpan::Fast::PP - Pure Perl implementation.
+Net::CIDR::Set::PP - Pure Perl implementation.
 
 =head1 VERSION
 
-This document describes Set::IntSpan::Fast::PP version 1.15
+This document describes Net::CIDR::Set::PP version 1.15
 
 =cut
 

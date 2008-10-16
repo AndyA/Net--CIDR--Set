@@ -1,7 +1,7 @@
 use Test::More tests => 12128;
 
-use Set::IntSpan::Fast;
-use Set::IntSpan::Fast::PP;
+use Net::CIDR::Set;
+use Net::CIDR::Set::PP;
 
 # Basic hash based set for testing
 
@@ -46,7 +46,7 @@ sub as_array_ref {
 
 # Extend Set::IntSpace::Fast
 
-package Set::IntSpan::Fast::PP;
+package Net::CIDR::Set::PP;
 
 sub as_array_ref {
   my $self = shift;
@@ -74,11 +74,11 @@ sub is_sane {
 
 package main;
 
-for my $class ( qw( Set::IntSpan::Fast Set::IntSpan::Fast::PP ) ) {
+for my $class ( qw( Net::CIDR::Set Net::CIDR::Set::PP ) ) {
 
   {
     my $set = $class->new;
-    isa_ok $set, 'Set::IntSpan::Fast::PP';
+    isa_ok $set, 'Net::CIDR::Set::PP';
     isa_ok $set, $class;
   }
 

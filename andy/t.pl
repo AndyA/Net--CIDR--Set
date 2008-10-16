@@ -7,12 +7,12 @@
 
 use strict;
 use lib qw(lib);
-use Set::IntSpan::Fast;
+use Net::CIDR::Set;
 use Data::Dumper;
 
 $| = 1;
 
-my $set = Set::IntSpan::Fast->new();
+my $set = Net::CIDR::Set->new();
 
 $set->add(1, 3, 5, 7, 9);
 $set->add_range(100, 1_000_000);

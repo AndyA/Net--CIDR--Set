@@ -1,6 +1,6 @@
 Changes
-lib/Set/IntSpan/Fast.pm
-lib/Set/IntSpan/Fast/PP.pm
+lib/Net/CIDR/Set.pm
+lib/Net/CIDR/Set/PP.pm
 Makefile.PL
 MANIFEST
 README

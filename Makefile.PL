@@ -7,20 +7,20 @@ use ExtUtils::MakeMaker;
 
 eval 'use ExtUtils::MakeMaker::Coverage';
 
-eval 'use Set::IntSpan::Fast::XS';
+eval 'use Net::CIDR::Set::XS';
 
 warn "================================================\n"
  . "For even faster set handling consider installing\n"
- . "Set::IntSpan::Fast::XS\n"
+ . "Net::CIDR::Set::XS\n"
  . "================================================\n"
  if $@;
 
 WriteMakefile(
   ( MM->can( 'signature_target' ) ? ( SIGN => 1 ) : () ),
-  NAME          => 'Set::IntSpan::Fast',
+  NAME          => 'Net::CIDR::Set',
   AUTHOR        => 'Andy Armstrong <andy@hexten.net>',
-  VERSION_FROM  => 'lib/Set/IntSpan/Fast.pm',
-  ABSTRACT_FROM => 'lib/Set/IntSpan/Fast.pm',
+  VERSION_FROM  => 'lib/Net/CIDR/Set.pm',
+  ABSTRACT_FROM => 'lib/Net/CIDR/Set.pm',
   LICENSE       => 'perl',
   PL_FILES      => {},
   PREREQ_PM     => {
@@ -29,5 +29,5 @@ WriteMakefile(
     'List::Util'  => 0,
   },
   dist  => { COMPRESS => 'gzip -9f', SUFFIX => 'gz', },
-  clean => { FILES    => 'Set-IntSpan-Fast-*' },
+  clean => { FILES    => 'Net-CIDR-Set-*' },
 );

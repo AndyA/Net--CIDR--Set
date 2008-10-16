@@ -1,4 +1,4 @@
-package Set::IntSpan::Fast;
+package Net::CIDR::Set;
 
 use warnings;
 use strict;
@@ -8,30 +8,30 @@ use List::Util qw(min max);
 
 =head1 NAME
 
-Set::IntSpan::Fast - Fast handling of sets containing integer spans.
+Net::CIDR::Set - Fast handling of sets containing integer spans.
 
 =head1 VERSION
 
-This document describes Set::IntSpan::Fast version 1.15
+This document describes Net::CIDR::Set version 1.15
 
 =cut
 
 BEGIN {
   our $VERSION = '1.15';
   our @ISA;
-  eval "use Set::IntSpan::Fast::XS ()";
+  eval "use Net::CIDR::Set::XS ()";
   if ( $@ ) {
     if ( $@ =~ /^Can't\s+locate/ ) {
-      eval "use Set::IntSpan::Fast::PP ()";
+      eval "use Net::CIDR::Set::PP ()";
       die $@ if $@;
-      @ISA = qw( Set::IntSpan::Fast::PP );
+      @ISA = qw( Net::CIDR::Set::PP );
     }
     else {
       die $@;
     }
   }
   else {
-    @ISA = qw( Set::IntSpan::Fast::XS );
+    @ISA = qw( Net::CIDR::Set::XS );
   }
 }
 
@@ -40,16 +40,16 @@ __END__
 
 =head1 SYNOPSIS
 
-    use Set::IntSpan::Fast;
+    use Net::CIDR::Set;
     
-    my $set = Set::IntSpan::Fast->new();
+    my $set = Net::CIDR::Set->new();
     $set->add(1, 3, 5, 7, 9);
     $set->add_range(100, 1_000_000);
     print $set->as_string(), "\n";    # prints 1,3,5,7,9,100-1000000
 
 =head1 DESCRIPTION
 
-C<Set::IntSpan::Fast> represents sets of integers. It is optimised for
+C<Net::CIDR::Set> represents sets of integers. It is optimised for
 sets that contain contiguous runs of values.
 
     1-1000, 2000-10000      # Efficiently handled
@@ -61,17 +61,17 @@ clusters of values.
 
 Sets may be infinite - assuming you're prepared to accept that infinity
 is actually no more than a fairly large integer. Specifically the
-constants C<Set::IntSpan::Fast::NEGATIVE_INFINITY> and
-C<Set::IntSpan::Fast::POSITIVE_INFINITY> are defined to be -(2^31-1) and
+constants C<Net::CIDR::Set::NEGATIVE_INFINITY> and
+C<Net::CIDR::Set::POSITIVE_INFINITY> are defined to be -(2^31-1) and
 (2^31-2) respectively. To create an infinite set invert an empty one:
 
-    my $inf = Set::IntSpan::Fast->new()->complement();
+    my $inf = Net::CIDR::Set->new()->complement();
 
 Sets need only be bounded in one direction - for example this is the set
 of all positive integers (assuming you accept the slightly feeble
 definition of infinity we're using):
 
-    my $pos_int = Set::IntSpan::Fast->new();
+    my $pos_int = Net::CIDR::Set->new();
     $pos_int->add_range(1, $pos_int->POSITIVE_INFINITY);
 
 =head2 Set representation
@@ -97,13 +97,13 @@ ranges in order and uses a binary search for many internal operations
 so that overall performance tends towards O log N where N is the number
 of ranges.
 
-=head2 C<Set::IntSpan::Fast::XS>
+=head2 C<Net::CIDR::Set::XS>
 
-If L<Set::IntSpan::Fast::XS> is installed it will automatically be used
-when a new C<Set::IntSpan::Fast> is created. There is no need to change
+If L<Net::CIDR::Set::XS> is installed it will automatically be used
+when a new C<Net::CIDR::Set> is created. There is no need to change
 any code; the XS module is automatically detected and loaded.
 
-If you have a C compiler consider installing C<Set::IntSpan::Fast::XS>
+If you have a C compiler consider installing C<Net::CIDR::Set::XS>
 for even better performance.
 
 =head1 INTERFACE
@@ -113,12 +113,12 @@ for even better performance.
 Create a new set. Any arguments will be processed by a call to
 C<add_from_string>:
 
-    my $set = Set::IntSpan::Fast->new( '1, 3, 5, 10-100' );
+    my $set = Net::CIDR::Set->new( '1, 3, 5, 10-100' );
 
 Because C<add_from_string> handles multiple arguments this will work:
 
     my @nums = ( 1, 2, 3, 4, 5 );
-    my $set = Set::IntSpan::Fast->new( @nums );
+    my $set = Net::CIDR::Set->new( @nums );
 
 Bear in mind though that this validates each element of the array is it
 would if you called C<add_from_string> so for large sets it will be
@@ -317,7 +317,7 @@ Return an array containing all the members of the set in ascending order.
 
 Return a string representation of the set.
 
-    my $set = Set::IntSpan::Fast->new();
+    my $set = Net::CIDR::Set->new();
     $set->add(1, 3, 5, 7, 9);
     $set->add_range(100, 1_000_000);
     print $set->as_string(), "\n";    # prints 1,3,5,7,9,100-1000000
@@ -350,7 +350,7 @@ noted above these are infinitely smaller than infinity but they're the
 best we've got. They're not exported into the caller's namespace so if you
 want to use them you'll have to use their fully qualified names:
 
-    $set->add_range(1, Set::IntSpan::Fast::POSITIVE_INFINITY);
+    $set->add_range(1, Net::CIDR::Set::POSITIVE_INFINITY);
 
 =head1 DIAGNOSTICS
 
@@ -385,7 +385,7 @@ The method that complements a set is called C<complement>.
 C<superset> and C<subset> need two sets to compare. They may be called
 either as a function:
 
-    $ss = Set::IntSpan::Fast::subset( $s1, $s2 )
+    $ss = Net::CIDR::Set::subset( $s1, $s2 )
     
 or as a method:
 
@@ -403,7 +403,7 @@ configuration files, and the meaning of any environment variables or
 properties that can be set. These descriptions must also include details
 of any configuration language used.
 
-Set::IntSpan::Fast requires no configuration files or environment
+Net::CIDR::Set requires no configuration files or environment
 variables.
 
 =head1 DEPENDENCIES
@@ -421,7 +421,7 @@ it isn't a drop-in replacement.
 No bugs have been reported.
 
 Please report any bugs or feature requests to 
-C<bug-set-intspan-fast@rt.cpan.org>, or through the web interface at
+C<bug-net-cidr-set@rt.cpan.org>, or through the web interface at
 L<http://rt.cpan.org>.
 
 =head1 AUTHOR

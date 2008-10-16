@@ -1,7 +1,7 @@
 use strict;
 use warnings;
 use Test::More;
-use Set::IntSpan::Fast;
+use Net::CIDR::Set;
 
 my @schedule;
 
@@ -30,9 +30,9 @@ BEGIN {
 for my $test ( @schedule ) {
   my $name = $test->{name};
   my $args = $test->{args};
-  ok my $set = Set::IntSpan::Fast->new( @$args ),
+  ok my $set = Net::CIDR::Set->new( @$args ),
    "$name: set created OK";
-  isa_ok $set, 'Set::IntSpan::Fast';
+  isa_ok $set, 'Net::CIDR::Set';
   my @got = $set->as_array();
   is_deeply \@got, $test->{expect}, "$name: contents OK";
 }

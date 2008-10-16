@@ -1,7 +1,7 @@
 use strict;
 use warnings;
 use Test::More;
-use Set::IntSpan::Fast;
+use Net::CIDR::Set;
 
 my @schedule;
 
@@ -71,8 +71,8 @@ BEGIN {
 
 for my $test ( @schedule ) {
   my $name = $test->{name};
-  ok my $set = Set::IntSpan::Fast->new(), "$name: set created OK";
-  ok my $nset = Set::IntSpan::Fast->new(),
+  ok my $set = Net::CIDR::Set->new(), "$name: set created OK";
+  ok my $nset = Net::CIDR::Set->new(),
    "$name: second set created OK";
   my $in  = $test->{in};
   my @opt = ();
