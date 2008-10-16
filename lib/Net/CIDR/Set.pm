@@ -1,4 +1,4 @@
-package Net::CIDR::Set::PP;
+package Net::CIDR::Set;
 
 use warnings;
 use strict;
@@ -8,50 +8,133 @@ use List::Util qw(min max);
 
 =head1 NAME
 
-Net::CIDR::Set::PP - Pure Perl implementation.
+Net::CIDR::Set - Pure Perl implementation.
 
 =head1 VERSION
 
-This document describes Net::CIDR::Set::PP version 1.15
+This document describes Net::CIDR::Set version 0.10
 
 =cut
 
-our $VERSION = '1.15';
+our $VERSION = '0.10';
 
 use constant POSITIVE_INFINITY => 2**31 - 2;
 use constant NEGATIVE_INFINITY => -2**31 + 100;
 
 sub new {
   my $class = shift;
-  my $self = bless [], $class;
+  my $self = bless { ranges => [] }, $class;
   $self->add_from_string( @_ ) if @_;
   return $self;
 }
 
+=for reference
+
+# Stolen from Net::CIDR::Lite
+
+sub _init {
+  my $self = shift;
+  my $ip   = shift;
+  my ( $nbits, $pack, $unpack );
+  if ( _pack_ipv4( $ip ) ) {
+    $nbits  = 40;
+    $pack   = \&_pack_ipv4;
+    $unpack = \&_unpack_ipv4;
+  }
+  elsif ( _pack_ipv6( $ip ) ) {
+    $nbits  = 136;
+    $pack   = \&_pack_ipv6;
+    $unpack = \&_unpack_ipv6;
+  }
+  else {
+    return;
+  }
+  $$self{PACK}   = $pack;
+  $$self{UNPACK} = $unpack;
+  $$self{NBITS}  = $nbits;
+  $$self{MASKS}  = $masks{$nbits}
+   ||= [
+    map { pack( "B*", substr( "1" x $_ . "0" x $nbits, 0, $nbits ) ) }
+     0 .. $nbits ];
+  $$self{RANGES} = {};
+  $self;
+}
+
+sub _pack_ipv4 {
+  my @nums = split /\./, shift(), -1;
+  return unless @nums == 4;
+  for ( @nums ) {
+    return unless /^\d{1,3}$/ and $_ <= 255;
+  }
+  pack( "CC*", 0, @nums );
+}
+
+sub _unpack_ipv4 {
+  join( ".", unpack( "xC*", shift ) );
+}
+
+sub _pack_ipv6 {
+  my $ip = shift;
+  return if $ip =~ /^:/ and $ip !~ s/^::/:/;
+  return if $ip =~ /:$/ and $ip !~ s/::$/:/;
+  my @nums = split /:/, $ip, -1;
+  return unless @nums <= 8;
+  my ( $empty, $ipv4, $str ) = ( 0, '', '' );
+  for ( @nums ) {
+    return if $ipv4;
+    $str .= "0" x ( 4 - length ) . $_, next if /^[a-fA-F\d]{1,4}$/;
+    do { return if $empty++ }, $str .= "X", next if $_ eq '';
+    next if $ipv4 = _pack_ipv4( $_ );
+    return;
+  }
+  return if $ipv4 and @nums > 6;
+  $str =~ s/X/"0" x (($ipv4 ? 25 : 33)-length($str))/e if $empty;
+  pack( "H*", "00" . $str ) . $ipv4;
+}
+
+sub _unpack_ipv6 {
+  _compress_ipv6( join( ":", unpack( "xH*", shift ) =~ /..../g ) ),;
+}
+
+# Replace longest run of null blocks with a double colon
+sub _compress_ipv6 {
+  my $ip = shift;
+  if ( my @runs = $ip =~ /((?:(?:^|:)(?:0000))+:?)/g ) {
+    my $max = $runs[0];
+    for ( @runs[ 1 .. $#runs ] ) {
+      $max = $_ if length( $max ) < length;
+    }
+    $ip =~ s/$max/::/;
+  }
+  $ip =~ s/:0{1,3}/:/g;
+  $ip;
+}
+
+=cut
+
 sub invert {
   my $self = shift;
 
-  if ( $self->is_empty() ) {
-
+  if ( $self->is_empty ) {
     # Empty set
-    @$self = ( NEGATIVE_INFINITY, POSITIVE_INFINITY );
+    $self->{ranges} = [ NEGATIVE_INFINITY, POSITIVE_INFINITY ];
   }
   else {
 
     # Either add or remove infinity from each end. The net
     # effect is always an even number of additions and deletions
-    if ( $self->[0] == NEGATIVE_INFINITY ) {
-      shift @{$self};
+    if ( $self->{ranges}[0] == NEGATIVE_INFINITY ) {
+      shift @{ $self->{ranges} };
     }
     else {
-      unshift @{$self}, NEGATIVE_INFINITY;
+      unshift @{ $self->{ranges} }, NEGATIVE_INFINITY;
     }
 
-    if ( $self->[-1] == POSITIVE_INFINITY ) {
-      pop @{$self};
+    if ( $self->{ranges}[-1] == POSITIVE_INFINITY ) {
+      pop @{ $self->{ranges} };
     }
     else {
-      push @{$self}, POSITIVE_INFINITY;
+      push @{ $self->{ranges} }, POSITIVE_INFINITY;
     }
   }
 }
@@ -59,10 +142,9 @@ sub invert {
 sub copy {
   my $self  = shift;
   my $class = ref $self;
-  my $copy  = $class->new();
-  # This might not work for subclasses - in which case they should
-  # override copy
-  @$copy = @$self;
+  my $copy  = $class->new;
+  # TODO: we can do better than this.
+  @{ $copy->{ranges} } = @{ $self->{ranges} };
   return $copy;
 }
 
@@ -87,10 +169,10 @@ sub add_range {
       my $fpos = $self->_find_pos( $from );
       my $tpos = $self->_find_pos( $to + 1, $fpos );
 
-      $from = $self->[ --$fpos ] if ( $fpos & 1 );
-      $to   = $self->[ $tpos++ ] if ( $tpos & 1 );
+      $from = $self->{ranges}[ --$fpos ] if ( $fpos & 1 );
+      $to   = $self->{ranges}[ $tpos++ ] if ( $tpos & 1 );
 
-      splice @$self, $fpos, $tpos - $fpos, ( $from, $to );
+      splice @{ $self->{ranges} }, $fpos, $tpos - $fpos, ( $from, $to );
     }
   );
 }
@@ -138,24 +220,24 @@ sub add_from_string {
 sub remove_range {
   my $self = shift;
 
-  $self->invert();
+  $self->invert;
   $self->add_range( @_ );
-  $self->invert();
+  $self->invert;
 }
 
 sub remove_from_string {
   my $self = shift;
 
-  $self->invert();
+  $self->invert;
   $self->add_from_string( @_ );
-  $self->invert();
+  $self->invert;
 }
 
 sub merge {
   my $self = shift;
 
   for my $other ( @_ ) {
-    my $iter = $other->iterate_runs();
+    my $iter = $other->iterate_runs;
     while ( my ( $from, $to ) = $iter->() ) {
       $self->add_range( $from, $to );
     }
@@ -163,12 +245,12 @@ sub merge {
 }
 
 sub compliment {
-  croak "That's very kind of you - but I expect you meant complement()";
+  croak "That's very kind of you - but I expect you meant complement";
 }
 
 sub complement {
-  my $new = shift->copy();
-  $new->invert();
+  my $new = shift->copy;
+  $new->invert;
   return $new;
 }
 
@@ -181,27 +263,27 @@ sub union {
 sub intersection {
   my $self  = shift;
   my $class = ref $self;
-  my $new   = $class->new();
-  $new->merge( map { $_->complement() } $self, @_ );
-  $new->invert();
+  my $new   = $class->new;
+  $new->merge( map { $_->complement } $self, @_ );
+  $new->invert;
   return $new;
 }
 
 sub xor {
   my $self = shift;
   return $self->union( @_ )
-   ->intersection( $self->intersection( @_ )->complement() );
+   ->intersection( $self->intersection( @_ )->complement );
 }
 
 sub diff {
   my $self  = shift;
   my $other = shift;
-  return $self->intersection( $other->union( @_ )->complement() );
+  return $self->intersection( $other->union( @_ )->complement );
 }
 
 sub is_empty {
   my $self = shift;
-  return @$self == 0;
+  return @{ $self->{ranges} } == 0;
 }
 
 *contains = *contains_all;
@@ -234,7 +316,7 @@ sub contains_all_range {
   croak "Range limits must be in ascending order" if $lo > $hi;
 
   my $pos = $self->_find_pos( $lo + 1 );
-  return ( $pos & 1 ) && $hi < $self->[$pos];
+  return ( $pos & 1 ) && $hi < $self->{ranges}[$pos];
 }
 
 sub cardinality {
@@ -264,7 +346,7 @@ sub equals {
   return unless @_;
 
   # Array of array refs
-  my @edges = @_;
+  my @edges = map { $_->{ranges} } @_;
   my $medge = scalar( @edges ) - 1;
 
   POS: for ( my $pos = 0;; $pos++ ) {
@@ -290,7 +372,7 @@ sub equals {
 sub as_array {
   my $self = shift;
   my @ar   = ();
-  my $iter = $self->iterate_runs();
+  my $iter = $self->iterate_runs;
   while ( my ( $from, $to ) = $iter->() ) {
     push @ar, ( $from .. $to );
   }
@@ -302,7 +384,7 @@ sub as_string {
   my $self = shift;
   my $ctl = { sep => ',', range => '-' };
   %$ctl = ( %$ctl, %{ $_[0] } ) if @_;
-  my $iter = $self->iterate_runs();
+  my $iter = $self->iterate_runs;
   my @runs = ();
   while ( my ( $from, $to ) = $iter->() ) {
     push @runs,
@@ -326,7 +408,8 @@ sub iterate_runs {
       TRY: {
         return if $pos >= $limit;
 
-        my @r = ( $self->[$pos], $self->[ $pos + 1 ] - 1 );
+        my @r
+         = ( $self->{ranges}[$pos], $self->{ranges}[ $pos + 1 ] - 1 );
         $pos += 2;
 
         # Catch some edge cases
@@ -345,11 +428,12 @@ sub iterate_runs {
 
     # Unclipped iterator
     my $pos   = 0;
-    my $limit = scalar( @$self );
+    my $limit = scalar( @{ $self->{ranges} } );
 
     return sub {
       return if $pos >= $limit;
-      my @r = ( $self->[$pos], $self->[ $pos + 1 ] - 1 );
+      my @r
+       = ( $self->{ranges}[$pos], $self->{ranges}[ $pos + 1 ] - 1 );
       $pos += 2;
       return @r;
     };
@@ -381,14 +465,14 @@ sub _find_pos {
   my $val  = shift;
   my $low  = shift || 0;
 
-  my $high = scalar( @$self );
+  my $high = scalar( @{ $self->{ranges} } );
 
   while ( $low < $high ) {
     my $mid = int( ( $low + $high ) / 2 );
-    if ( $val < $self->[$mid] ) {
+    if ( $val < $self->{ranges}[$mid] ) {
       $high = $mid;
     }
-    elsif ( $val > $self->[$mid] ) {
+    elsif ( $val > $self->{ranges}[$mid] ) {
       $low = $mid + 1;
     }
     else {

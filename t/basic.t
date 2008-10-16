@@ -1,4 +1,4 @@
-use Test::More tests => 6064;
+use Test::More tests => 6063;
 
 use Net::CIDR::Set;
 
