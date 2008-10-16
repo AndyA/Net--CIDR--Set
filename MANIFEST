@@ -1,6 +1,5 @@
 Changes
 lib/Net/CIDR/Set.pm
-lib/Net/CIDR/Set/PP.pm
 Makefile.PL
 MANIFEST
 README

@@ -7,14 +7,6 @@ use ExtUtils::MakeMaker;
 
 eval 'use ExtUtils::MakeMaker::Coverage';
 
-eval 'use Net::CIDR::Set::XS';
-
-warn "================================================\n"
- . "For even faster set handling consider installing\n"
- . "Net::CIDR::Set::XS\n"
- . "================================================\n"
- if $@;
-
 WriteMakefile(
   ( MM->can( 'signature_target' ) ? ( SIGN => 1 ) : () ),
   NAME          => 'Net::CIDR::Set',

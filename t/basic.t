@@ -1,7 +1,6 @@
-use Test::More tests => 12128;
+use Test::More tests => 6064;
 
 use Net::CIDR::Set;
-use Net::CIDR::Set::PP;
 
 # Basic hash based set for testing
 
@@ -46,7 +45,7 @@ sub as_array_ref {
 
 # Extend Set::IntSpace::Fast
 
-package Net::CIDR::Set::PP;
+package Net::CIDR::Set;
 
 sub as_array_ref {
   my $self = shift;
@@ -74,11 +73,10 @@ sub is_sane {
 
 package main;
 
-for my $class ( qw( Net::CIDR::Set Net::CIDR::Set::PP ) ) {
+for my $class ( qw( Net::CIDR::Set ) ) {
 
   {
     my $set = $class->new;
-    isa_ok $set, 'Net::CIDR::Set::PP';
     isa_ok $set, $class;
   }
 
