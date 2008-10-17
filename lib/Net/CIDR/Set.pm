@@ -28,53 +28,57 @@ sub new {
 sub _pack { pack 'N', shift }
 sub _unpack { unpack 'N', shift }
 
-=for reference
-
 # Stolen from Net::CIDR::Lite
 
-sub _init {
-  my $self = shift;
-  my $ip   = shift;
-  my ( $nbits, $pack, $unpack );
-  if ( _pack_ipv4( $ip ) ) {
-    $nbits  = 40;
-    $pack   = \&_pack_ipv4;
-    $unpack = \&_unpack_ipv4;
+{
+  my %masks = ();
+
+  sub _init {
+    my $self = shift;
+    my $ip   = shift;
+    my ( $nbits, $pack, $unpack );
+    if ( _pack_ipv4( $ip ) ) {
+      $nbits  = 40;
+      $pack   = \&_pack_ipv4;
+      $unpack = \&_unpack_ipv4;
+    }
+    elsif ( _pack_ipv6( $ip ) ) {
+      $nbits  = 136;
+      $pack   = \&_pack_ipv6;
+      $unpack = \&_unpack_ipv6;
+    }
+    else {
+      return;
+    }
+    $$self{PACK}   = $pack;
+    $$self{UNPACK} = $unpack;
+    $$self{NBITS}  = $nbits;
+    $$self{MASKS}  = $masks{$nbits} ||= [
+      map { pack( "B*", substr( "1" x $_ . "0" x $nbits, 0, $nbits ) ) }
+       0 .. $nbits
+    ];
+    $$self{RANGES} = {};
+    $self;
   }
-  elsif ( _pack_ipv6( $ip ) ) {
-    $nbits  = 136;
-    $pack   = \&_pack_ipv6;
-    $unpack = \&_unpack_ipv6;
-  }
-  else {
-    return;
-  }
-  $$self{PACK}   = $pack;
-  $$self{UNPACK} = $unpack;
-  $$self{NBITS}  = $nbits;
-  $$self{MASKS}  = $masks{$nbits}
-   ||= [
-    map { pack( "B*", substr( "1" x $_ . "0" x $nbits, 0, $nbits ) ) }
-     0 .. $nbits ];
-  $$self{RANGES} = {};
-  $self;
 }
 
 sub _pack_ipv4 {
+  my $self = shift;
   my @nums = split /\./, shift(), -1;
   return unless @nums == 4;
   for ( @nums ) {
     return unless /^\d{1,3}$/ and $_ <= 255;
   }
-  pack( "CC*", 0, @nums );
+  return pack( "CC*", 0, @nums );
 }
 
 sub _unpack_ipv4 {
-  join( ".", unpack( "xC*", shift ) );
+  return join( ".", unpack( "xC*", shift ) );
 }
 
 sub _pack_ipv6 {
-  my $ip = shift;
+  my $self = shift;
+  my $ip   = shift;
   return if $ip =~ /^:/ and $ip !~ s/^::/:/;
   return if $ip =~ /:$/ and $ip !~ s/::$/:/;
   my @nums = split /:/, $ip, -1;
@@ -89,11 +93,12 @@ sub _pack_ipv6 {
   }
   return if $ipv4 and @nums > 6;
   $str =~ s/X/"0" x (($ipv4 ? 25 : 33)-length($str))/e if $empty;
-  pack( "H*", "00" . $str ) . $ipv4;
+  return pack( "H*", "00" . $str ) . $ipv4;
 }
 
 sub _unpack_ipv6 {
-  _compress_ipv6( join( ":", unpack( "xH*", shift ) =~ /..../g ) ),;
+  return _compress_ipv6(
+    join( ":", unpack( "xH*", shift ) =~ /..../g ) );
 }
 
 # Replace longest run of null blocks with a double colon
@@ -107,10 +112,8 @@ sub _compress_ipv6 {
     $ip =~ s/$max/::/;
   }
   $ip =~ s/:0{1,3}/:/g;
-  $ip;
+  return $ip;
 }
-
-=cut
 
 sub invert {
   my $self = shift;
@@ -319,8 +322,8 @@ sub contains_all_range {
 
   croak "Range limits must be in ascending order" if $lo > $hi;
 
-  my $pos = $self->_find_pos(_pack( $lo + 1) );
-  return ( $pos & 1 ) && _pack($hi) lt $self->{ranges}[$pos];
+  my $pos = $self->_find_pos( _pack( $lo + 1 ) );
+  return ( $pos & 1 ) && _pack( $hi ) lt $self->{ranges}[$pos];
 }
 
 sub cardinality {
