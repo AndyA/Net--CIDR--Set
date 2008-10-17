@@ -18,21 +18,23 @@ This document describes Net::CIDR::Set::IPv4 version 0.10
 
 our $VERSION = '0.10';
 
-=head2 C<< pack >>
+=head2 C<< encode >>
 
-Pack an IPv4 address into our internal bit vector format.
-
-=cut
-
-sub pack { shift->_pack_ipv4( @_ ) }
-
-=head2 C<< unpack >>
-
-Unpack an IPv4 address from our internal bit vector format.
+Encode an IPv4 address into our internal bit vector format.
 
 =cut
 
-sub unpack { shift->_unpack_ipv4( @_ ) }
+sub encode { shift->_encode_ipv4( @_ ) }
+
+=head2 C<< decode >>
+
+Decode an IPv4 address from our internal bit vector format.
+
+=cut
+
+sub decode { shift->_decode_ipv4( @_ ) }
+
+sub _nbits { 32 }
 
 1;
 __END__

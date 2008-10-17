@@ -28,39 +28,35 @@ sub new {
 sub _pack { pack 'N', shift }
 sub _unpack { unpack 'N', shift }
 
-# Stolen from Net::CIDR::Lite
+=head2 C<< pack >>
 
-{
-  my %masks = ();
+Pack an IPv4 or IPv6 address into our internal bit vector format.
 
-  sub _init {
-    my $self = shift;
-    my $ip   = shift;
-    my ( $nbits, $pack, $unpack );
-    if ( _pack_ipv4( $ip ) ) {
-      $nbits  = 40;
-      $pack   = \&_pack_ipv4;
-      $unpack = \&_unpack_ipv4;
-    }
-    elsif ( _pack_ipv6( $ip ) ) {
-      $nbits  = 136;
-      $pack   = \&_pack_ipv6;
-      $unpack = \&_unpack_ipv6;
-    }
-    else {
-      return;
-    }
-    $$self{PACK}   = $pack;
-    $$self{UNPACK} = $unpack;
-    $$self{NBITS}  = $nbits;
-    $$self{MASKS}  = $masks{$nbits} ||= [
-      map { pack( "B*", substr( "1" x $_ . "0" x $nbits, 0, $nbits ) ) }
-       0 .. $nbits
-    ];
-    $$self{RANGES} = {};
-    $self;
+=cut
+
+sub encode {
+  my $self = shift;
+  my $ip   = shift;
+  if ( _pack_ipv4( $ip ) ) {
+    bless $self, 'Net::CIDR::Set::IPv4';
   }
+  elsif ( _pack_ipv6( $ip ) ) {
+    bless $self, 'Net::CIDR::Set::IPv6';
+  }
+  else {
+    croak "Can't parse address $ip";
+  }
+  return $self->encode( $ip );
 }
+
+sub _nbits {
+  croak "Please add an address so I know what "
+   . "kind of data I'm dealing with";
+}
+
+*decode = *_nbits;
+
+# IPv4
 
 sub _pack_ipv4 {
   my $self = shift;
@@ -75,6 +71,8 @@ sub _pack_ipv4 {
 sub _unpack_ipv4 {
   return join( ".", unpack( "xC*", shift ) );
 }
+
+# IPv6
 
 sub _pack_ipv6 {
   my $self = shift;
@@ -118,7 +116,9 @@ sub _compress_ipv6 {
 sub invert {
   my $self = shift;
 
-  my ( $min, $max ) = map { _pack( $_ ) } 0, 2**30;
+  my @pad = ( 0 ) x ( $self->_nbits / 8 );
+
+  my ( $min, $max ) = map { pack 'C*', $_, @pad } 0, 1;
 
   if ( $self->is_empty ) {
     # Empty set

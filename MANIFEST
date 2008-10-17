@@ -5,12 +5,5 @@ lib/Net/CIDR/Set/IPv6.pm
 Makefile.PL
 MANIFEST
 README
-Session.vim
 t/00-load.t
-t/all-range.t
-t/basic.t
-t/construct.t
-t/misc.t
-t/miscstring.t
 t/pod.t
-t/string.t
