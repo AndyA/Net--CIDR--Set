@@ -1,4 +1,4 @@
-use Test::More tests => 6063;
+use Test::More tests => 2013;
 
 use Net::CIDR::Set;
 
@@ -81,10 +81,10 @@ for my $class ( qw( Net::CIDR::Set ) ) {
   }
 
   # Simple cases - two ranges overlapping in various ways
-  for my $i ( -5 .. 5 ) {
+  for my $i ( 0 .. 11 ) {
     for my $j ( $i .. 5 ) {
       my @set = ( $class->new(), TestSet->new() );
-      $_->add_range( -2, 2 ) for @set;
+      $_->add_range( 0, 4 ) for @set;
       is_deeply(
         $set[0]->as_array_ref(),
         $set[1]->as_array_ref(),
@@ -101,13 +101,13 @@ for my $class ( qw( Net::CIDR::Set ) ) {
   }
 
   # More complex cases - multiple overlaps
-  for my $i ( -20 .. 20 ) {
+  for my $i ( 0 .. 40 ) {
     for my $j ( $i .. 20 ) {
       my @set = ( $class->new(), TestSet->new() );
       for my $s ( @set ) {
         my $gap = 0;
-        my $pos = -18;
-        while ( $pos < 18 ) {
+        my $pos = 2;
+        while ( $pos < 38 ) {
           $s->add_range( $pos, $pos + $gap );
           $pos += $gap * 2;
           $gap++;
@@ -134,10 +134,10 @@ for my $class ( qw( Net::CIDR::Set ) ) {
   }
 
   # Simple cases - two ranges overlapping in various ways
-  for my $i ( -5 .. 5 ) {
+  for my $i ( 0 .. 10 ) {
     for my $j ( $i .. 5 ) {
       my @set = ( $class->new(), TestSet->new() );
-      $_->add_range( -2, 2 ) for @set;
+      $_->add_range( 0, 4 ) for @set;
       is_deeply(
         $set[0]->as_array_ref(),
         $set[1]->as_array_ref(),
@@ -154,13 +154,13 @@ for my $class ( qw( Net::CIDR::Set ) ) {
   }
 
   # More complex cases - multiple overlaps
-  for my $i ( -20 .. 20 ) {
+  for my $i ( 0 .. 40 ) {
     for my $j ( $i .. 20 ) {
       my @set = ( $class->new(), TestSet->new() );
       for my $s ( @set ) {
         my $gap = 0;
-        my $pos = -18;
-        while ( $pos < 18 ) {
+        my $pos = 2;
+        while ( $pos < 38 ) {
           $s->add_range( $pos, $pos + $gap );
           $pos += $gap * 2;
           $gap++;

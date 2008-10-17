@@ -162,6 +162,6 @@ sub brute_force_card_in_range {
   ok( !$set->contains_any( 0 ), 'empty contains_any' );
   $set->add( 3 );
   ok( !$set->contains_any( 0, 2, 4, 6 ), 'false contains_any' );
-  $set->add_range( -3, 3 );
-  ok( $set->contains_any( -4, 0 ), 'range contains_any' );
+  $set->add_range( 0, 6 );
+  ok( $set->contains_any( 0, 4 ), 'range contains_any' );
 }

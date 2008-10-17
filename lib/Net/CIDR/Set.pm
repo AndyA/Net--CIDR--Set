@@ -18,8 +18,8 @@ This document describes Net::CIDR::Set version 0.10
 
 our $VERSION = '0.10';
 
-use constant POSITIVE_INFINITY => 2**31 - 2;
-use constant NEGATIVE_INFINITY => -2**31 + 100;
+use constant POSITIVE_INFINITY => 2**30;
+use constant NEGATIVE_INFINITY => 0;
 
 sub new {
   my $class = shift;
@@ -27,6 +27,9 @@ sub new {
   $self->add_from_string( @_ ) if @_;
   return $self;
 }
+
+sub _pack { pack 'N', shift }
+sub _unpack { unpack 'N', shift }
 
 =for reference
 

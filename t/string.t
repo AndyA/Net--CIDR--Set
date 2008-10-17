@@ -30,21 +30,9 @@ BEGIN {
       out  => '1:2,5:6',
     },
     {
-      name => 'Different range, sep, quotemeta, negatives',
-      in   => [ 1, 2, 5, 6, -10, -5 ],
-      opts => { sep => '|', range => '*' },
-      out  => '-10*-5|1*2|5*6',
-    },
-    {
       name => 'Simple parsing',
       in   => '100,200,300,400',
       out  => [ 100, 100, 200, 200, 300, 300, 400, 400 ]
-    },
-    {
-      # Looks odd, should work
-      name => 'Negative number',
-      in   => '-10-10,-30--20',
-      out  => [ -30, -20, -10, 10 ]
     },
     {
       name => 'Set sep',
