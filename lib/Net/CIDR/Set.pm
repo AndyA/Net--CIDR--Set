@@ -29,8 +29,9 @@ sub _pack { pack 'N', shift }
 sub _unpack { unpack 'N', shift }
 
 sub _inc {
-  my @b = reverse unpack 'C*', shift for ( @b ) {
-    last unless $_++ == 0x100;
+  my @b = reverse unpack 'C*', shift;
+  for ( @b ) {
+    last unless ++$_ == 256;
     $_ = 0;
   }
   return pack 'C*', reverse @b;
