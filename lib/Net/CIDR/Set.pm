@@ -28,6 +28,14 @@ sub new {
 sub _pack { pack 'N', shift }
 sub _unpack { unpack 'N', shift }
 
+sub _inc {
+  my @b = reverse unpack 'C*', shift for ( @b ) {
+    last unless $_++ == 0x100;
+    $_ = 0;
+  }
+  return pack 'C*', reverse @b;
+}
+
 =head2 C<< pack >>
 
 Pack an IPv4 or IPv6 address into our internal bit vector format.
@@ -37,10 +45,10 @@ Pack an IPv4 or IPv6 address into our internal bit vector format.
 sub encode {
   my $self = shift;
   my $ip   = shift;
-  if ( _pack_ipv4( $ip ) ) {
+  if ( _decode_ipv4( $ip ) ) {
     bless $self, 'Net::CIDR::Set::IPv4';
   }
-  elsif ( _pack_ipv6( $ip ) ) {
+  elsif ( _decode_ipv6( $ip ) ) {
     bless $self, 'Net::CIDR::Set::IPv6';
   }
   else {
@@ -69,7 +77,46 @@ sub _pack_ipv4 {
 }
 
 sub _unpack_ipv4 {
+  my $self = shift;
   return join( ".", unpack( "xC*", shift ) );
+}
+
+sub _width2bits {
+  my ( $width, $size ) = @_;
+  return pack 'b*', ( '1' x $width ) . ( '0' x ( $size - $width ) );
+}
+
+sub _ip2bits {
+  my $ip = shift or return;
+  my $bits = unpack 'b*', $ip;
+  return unless $bits =~ /^1*0*$/;
+  return $ip;
+}
+
+sub _decode_ipv4 {
+  my ( $self, $ip ) = @_;
+  if ( $ip =~ m{^(.+?)/(.+)$} ) {
+    return unless my $addr = _pack_ipv4( $1 );
+    my $mask = $2;
+    return
+     unless my $bits
+       = ( $mask =~ /^\d+$/ )
+      ? _width2bits( $mask, 32 )
+      : _ip2bits( _pack_ipv4( $mask ) );
+    return ( $addr & $bits, _inc( $addr | ~$bits ) );
+  }
+  elsif ( $ip =~ m{^(.+?)-(.+)$} ) {
+    return unless my $lo = _pack_ipv4( $1 );
+    return unless my $hi = _pack_ipv4( $2 );
+    return ( $lo, _inc( $hi ) );
+  }
+  else {
+    return _decode_ipv4( "$ip/32" );
+  }
+}
+
+sub _encode_ipv4 {
+  my ( $self, $addr, $mask ) = @_;
 }
 
 # IPv6
@@ -95,6 +142,7 @@ sub _pack_ipv6 {
 }
 
 sub _unpack_ipv6 {
+  my $self = shift;
   return _compress_ipv6(
     join( ":", unpack( "xH*", shift ) =~ /..../g ) );
 }
@@ -111,6 +159,14 @@ sub _compress_ipv6 {
   }
   $ip =~ s/:0{1,3}/:/g;
   return $ip;
+}
+
+sub _decode_ipv6 {
+  my ( $self, $ip ) = @_;
+}
+
+sub _encode_ipv6 {
+  my ( $self, $addr, $mask ) = @_;
 }
 
 sub invert {

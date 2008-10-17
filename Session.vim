@@ -74,7 +74,7 @@ badd +109 ~/Works/Perl/NotMine/Net-CIDR-Lite/Lite.pm
 badd +3 t/all-range.t
 badd +44 t/misc.t
 badd +10 andy/pack.pl
-badd +0 t/basic.t
+badd +1 t/basic.t
 badd +28 t/string.t
 badd +1 lib/Net/CIDR/Set/IPv4.pm
 badd +31 lib/Net/CIDR/Set/IPv6.pm
@@ -93,11 +93,11 @@ set nosplitbelow
 set nosplitright
 wincmd t
 set winheight=1 winwidth=1
-exe 'vert 1resize ' . ((&columns * 84 + 85) / 170)
-exe '2resize ' . ((&lines * 22 + 23) / 47)
-exe 'vert 2resize ' . ((&columns * 85 + 85) / 170)
-exe '3resize ' . ((&lines * 22 + 23) / 47)
-exe 'vert 3resize ' . ((&columns * 85 + 85) / 170)
+exe 'vert 1resize ' . ((&columns * 84 + 85) / 171)
+exe '2resize ' . ((&lines * 21 + 23) / 46)
+exe 'vert 2resize ' . ((&columns * 86 + 85) / 171)
+exe '3resize ' . ((&lines * 22 + 23) / 46)
+exe 'vert 3resize ' . ((&columns * 86 + 85) / 171)
 argglobal
 setlocal noautoindent
 setlocal nobinary
@@ -189,29 +189,73 @@ setlocal nowinfixheight
 setlocal nowinfixwidth
 setlocal wrap
 setlocal wrapmargin=0
-62
+32
 normal zo
-62
+33
 normal zo
-117
+32
 normal zo
-117
+46
 normal zo
-167
+46
 normal zo
-170
+70
 normal zo
-172
+70
 normal zo
-170
+80
 normal zo
-167
+85
 normal zo
-let s:l = 115 - ((6 * winheight(0) + 22) / 45)
+90
+normal zo
+97
+normal zo
+99
+normal zo
+103
+normal zo
+99
+normal zo
+109
+normal zo
+114
+normal zo
+97
+normal zo
+119
+normal zo
+145
+normal zo
+145
+normal zo
+152
+normal zo
+152
+normal zo
+165
+normal zo
+169
+normal zo
+173
+normal zo
+173
+normal zo
+223
+normal zo
+226
+normal zo
+228
+normal zo
+226
+normal zo
+223
+normal zo
+let s:l = 95 - ((5 * winheight(0) + 22) / 44)
 if s:l < 1 | let s:l = 1 | endif
 exe s:l
 normal! zt
-115
+95
 normal! 0
 wincmd w
 argglobal
@@ -306,12 +350,12 @@ setlocal nowinfixheight
 setlocal nowinfixwidth
 setlocal wrap
 setlocal wrapmargin=0
-let s:l = 37 - ((10 * winheight(0) + 11) / 22)
+let s:l = 38 - ((11 * winheight(0) + 10) / 21)
 if s:l < 1 | let s:l = 1 | endif
 exe s:l
 normal! zt
-37
-normal! 015l
+38
+normal! 0
 lcd ~/Works/Perl/Net-CIDR-Set/trunk
 wincmd w
 argglobal
@@ -406,18 +450,18 @@ setlocal nowinfixheight
 setlocal nowinfixwidth
 setlocal wrap
 setlocal wrapmargin=0
-let s:l = 37 - ((16 * winheight(0) + 11) / 22)
+let s:l = 27 - ((5 * winheight(0) + 11) / 22)
 if s:l < 1 | let s:l = 1 | endif
 exe s:l
 normal! zt
-37
+27
 normal! 014l
 wincmd w
-exe 'vert 1resize ' . ((&columns * 84 + 85) / 170)
-exe '2resize ' . ((&lines * 22 + 23) / 47)
-exe 'vert 2resize ' . ((&columns * 85 + 85) / 170)
-exe '3resize ' . ((&lines * 22 + 23) / 47)
-exe 'vert 3resize ' . ((&columns * 85 + 85) / 170)
+exe 'vert 1resize ' . ((&columns * 84 + 85) / 171)
+exe '2resize ' . ((&lines * 21 + 23) / 46)
+exe 'vert 2resize ' . ((&columns * 86 + 85) / 171)
+exe '3resize ' . ((&lines * 22 + 23) / 46)
+exe 'vert 3resize ' . ((&columns * 86 + 85) / 171)
 tabnext 1
 if exists('s:wipebuf')
   silent exe 'bwipe ' . s:wipebuf
