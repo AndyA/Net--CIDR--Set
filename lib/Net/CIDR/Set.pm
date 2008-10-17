@@ -28,11 +28,22 @@ sub new {
 sub _pack { pack 'N', shift }
 sub _unpack { unpack 'N', shift }
 
+# Hideously slow - but we don't do them often
+
 sub _inc {
   my @b = reverse unpack 'C*', shift;
   for ( @b ) {
     last unless ++$_ == 256;
     $_ = 0;
+  }
+  return pack 'C*', reverse @b;
+}
+
+sub _dec {
+  my @b = reverse unpack 'C*', shift;
+  for ( @b ) {
+    last unless $_-- == 0;
+    $_ = 255;
   }
   return pack 'C*', reverse @b;
 }
@@ -68,7 +79,6 @@ sub _nbits {
 # IPv4
 
 sub _pack_ipv4 {
-  my $self = shift;
   my @nums = split /\./, shift(), -1;
   return unless @nums == 4;
   for ( @nums ) {
@@ -78,17 +88,24 @@ sub _pack_ipv4 {
 }
 
 sub _unpack_ipv4 {
-  my $self = shift;
   return join( ".", unpack( "xC*", shift ) );
 }
 
 sub _width2bits {
   my ( $width, $size ) = @_;
-  return pack 'b*', ( '1' x $width ) . ( '0' x ( $size - $width ) );
+  return pack 'b*',
+   ( '1' x ( $width + 8 ) ) . ( '0' x ( $size - $width ) );
+}
+
+sub _set_top_byte {
+  my @v = unpack 'C*', shift;
+  $v[0] = 255;
+  return pack 'C*', @v;
 }
 
 sub _ip2bits {
   my $ip = shift or return;
+  $ip = _set_top_byte( $ip );
   my $bits = unpack 'b*', $ip;
   return unless $bits =~ /^1*0*$/;
   return $ip;
@@ -112,19 +129,20 @@ sub _decode_ipv4 {
     return ( $lo, _inc( $hi ) );
   }
   else {
-    return _decode_ipv4( "$ip/32" );
+    return $self->_decode_ipv4( "$ip/32" );
   }
 }
 
 sub _encode_ipv4 {
-  my ( $self, $addr, $mask ) = @_;
+  my ( $self, $lo, $hi ) = @_;
+  # Just spit out a range for now
+  return join '-', _unpack_ipv4( $lo ), _unpack_ipv4( _dec( $hi ) );
 }
 
 # IPv6
 
 sub _pack_ipv6 {
-  my $self = shift;
-  my $ip   = shift;
+  my $ip = shift;
   return if $ip =~ /^:/ and $ip !~ s/^::/:/;
   return if $ip =~ /:$/ and $ip !~ s/::$/:/;
   my @nums = split /:/, $ip, -1;
@@ -143,7 +161,6 @@ sub _pack_ipv6 {
 }
 
 sub _unpack_ipv6 {
-  my $self = shift;
   return _compress_ipv6(
     join( ":", unpack( "xH*", shift ) =~ /..../g ) );
 }
@@ -167,7 +184,7 @@ sub _decode_ipv6 {
 }
 
 sub _encode_ipv6 {
-  my ( $self, $addr, $mask ) = @_;
+  my ( $self, $lo, $hi ) = @_;
 }
 
 sub invert {
