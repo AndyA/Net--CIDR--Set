@@ -18,9 +18,6 @@ This document describes Net::CIDR::Set version 0.10
 
 our $VERSION = '0.10';
 
-use constant POSITIVE_INFINITY => 2**30;
-use constant NEGATIVE_INFINITY => 0;
-
 sub new {
   my $class = shift;
   my $self = bless { ranges => [] }, $class;
@@ -118,26 +115,28 @@ sub _compress_ipv6 {
 sub invert {
   my $self = shift;
 
+  my ( $min, $max ) = map { _pack( $_ ) } 0, 2**30;
+
   if ( $self->is_empty ) {
     # Empty set
-    $self->{ranges} = [ NEGATIVE_INFINITY, POSITIVE_INFINITY ];
+    $self->{ranges} = [ $min, $max ];
   }
   else {
 
     # Either add or remove infinity from each end. The net
     # effect is always an even number of additions and deletions
-    if ( $self->{ranges}[0] == NEGATIVE_INFINITY ) {
+    if ( $self->{ranges}[0] eq $min ) {
       shift @{ $self->{ranges} };
     }
     else {
-      unshift @{ $self->{ranges} }, NEGATIVE_INFINITY;
+      unshift @{ $self->{ranges} }, $min;
     }
 
-    if ( $self->{ranges}[-1] == POSITIVE_INFINITY ) {
+    if ( $self->{ranges}[-1] eq $max ) {
       pop @{ $self->{ranges} };
     }
     else {
-      push @{ $self->{ranges} }, POSITIVE_INFINITY;
+      push @{ $self->{ranges} }, $max;
     }
   }
 }
@@ -170,7 +169,8 @@ sub add_range {
       my ( $from, $to ) = @_;
 
       my $fpos = $self->_find_pos( $from );
-      my $tpos = $self->_find_pos( $to + 1, $fpos );
+      # TODO: Maths?
+      my $tpos = $self->_find_pos( _pack( _unpack( $to ) + 1 ), $fpos );
 
       $from = $self->{ranges}[ --$fpos ] if ( $fpos & 1 );
       $to   = $self->{ranges}[ $tpos++ ] if ( $tpos & 1 );
@@ -295,7 +295,7 @@ sub contains_any {
   my $self = shift;
 
   for my $i ( @_ ) {
-    my $pos = $self->_find_pos( $i + 1 );
+    my $pos = $self->_find_pos( _pack( $i + 1 ) );
     return 1 if $pos & 1;
   }
 
@@ -306,7 +306,7 @@ sub contains_all {
   my $self = shift;
 
   for my $i ( @_ ) {
-    my $pos = $self->_find_pos( $i + 1 );
+    my $pos = $self->_find_pos( _pack( $i + 1 ) );
     return unless $pos & 1;
   }
 
@@ -314,12 +314,13 @@ sub contains_all {
 }
 
 sub contains_all_range {
-  my ( $self, $lo, $hi ) = @_;
+  my $self = shift;
+  my ( $lo, $hi ) = @_;
 
   croak "Range limits must be in ascending order" if $lo > $hi;
 
-  my $pos = $self->_find_pos( $lo + 1 );
-  return ( $pos & 1 ) && $hi < $self->{ranges}[$pos];
+  my $pos = $self->_find_pos(_pack( $lo + 1) );
+  return ( $pos & 1 ) && _pack($hi) lt $self->{ranges}[$pos];
 }
 
 sub cardinality {
@@ -357,7 +358,7 @@ sub equals {
     if ( defined( $v ) ) {
       for ( @edges[ 1 .. $medge ] ) {
         my $vv = $_->[$pos];
-        return unless defined( $vv ) && $vv == $v;
+        return unless defined( $vv ) && $vv eq $v;
       }
     }
     else {
@@ -391,7 +392,7 @@ sub as_string {
   my @runs = ();
   while ( my ( $from, $to ) = $iter->() ) {
     push @runs,
-     $from == $to ? $from : join( $ctl->{range}, $from, $to );
+     $from eq $to ? $from : join( $ctl->{range}, $from, $to );
   }
   return join( $ctl->{sep}, @runs );
 }
@@ -402,28 +403,34 @@ sub iterate_runs {
   if ( @_ ) {
 
     # Clipped iterator
-    my ( $clip_lo, $clip_hi ) = @_;
+    my ( $clip_lo, $clip_hi ) = map { _pack( $_ ) } @_;
 
     my $pos = $self->_find_pos( $clip_lo ) & ~1;
-    my $limit = ( $self->_find_pos( $clip_hi + 1, $pos ) + 1 ) & ~1;
+    my $limit
+     = (
+      $self->_find_pos( _pack( _unpack( $clip_hi ) + 1 ), $pos ) + 1 )
+     & ~1;
 
     return sub {
       TRY: {
         return if $pos >= $limit;
 
-        my @r
-         = ( $self->{ranges}[$pos], $self->{ranges}[ $pos + 1 ] - 1 );
+        # TODO: Maths
+        my @r = (
+          $self->{ranges}[$pos],
+          _pack( _unpack( $self->{ranges}[ $pos + 1 ] ) - 1 )
+        );
         $pos += 2;
 
         # Catch some edge cases
-        redo TRY if $r[1] < $clip_lo;
-        return   if $r[0] > $clip_hi;
+        redo TRY if $r[1] lt $clip_lo;
+        return   if $r[0] gt $clip_hi;
 
         # Clip to range
-        $r[0] = $clip_lo if $r[0] < $clip_lo;
-        $r[1] = $clip_hi if $r[1] > $clip_hi;
+        $r[0] = $clip_lo if $r[0] lt $clip_lo;
+        $r[1] = $clip_hi if $r[1] gt $clip_hi;
 
-        return @r;
+        return map { _unpack( $_ ) } @r;
       }
     };
   }
@@ -435,8 +442,10 @@ sub iterate_runs {
 
     return sub {
       return if $pos >= $limit;
-      my @r
-       = ( $self->{ranges}[$pos], $self->{ranges}[ $pos + 1 ] - 1 );
+      my @r = (
+        _unpack( $self->{ranges}[$pos] ),
+        _unpack( $self->{ranges}[ $pos + 1 ] ) - 1
+      );
       $pos += 2;
       return @r;
     };
@@ -452,7 +461,7 @@ sub _list_to_ranges {
   my $pos    = 0;
   while ( $pos < $count ) {
     my $end = $pos + 1;
-    $end++ while $end < $count && $list[$end] <= $list[ $end - 1 ] + 1;
+    $end++ while $end < $count && $list[$end] le $list[ $end - 1 ] + 1;
     push @ranges, ( $list[$pos], $list[ $end - 1 ] );
     $pos = $end;
   }
@@ -472,10 +481,10 @@ sub _find_pos {
 
   while ( $low < $high ) {
     my $mid = int( ( $low + $high ) / 2 );
-    if ( $val < $self->{ranges}[$mid] ) {
+    if ( $val lt $self->{ranges}[$mid] ) {
       $high = $mid;
     }
-    elsif ( $val > $self->{ranges}[$mid] ) {
+    elsif ( $val gt $self->{ranges}[$mid] ) {
       $low = $mid + 1;
     }
     else {
@@ -501,12 +510,12 @@ sub _iterate_ranges {
      unless is_int( $from ) && is_int( $to );
     croak "Range limits must be in ascending order"
      unless $from <= $to;
-    croak "Value out of range"
-     unless $from >= NEGATIVE_INFINITY && $to <= POSITIVE_INFINITY;
+    #croak "Value out of range"
+    #unless $from >= NEGATIVE_INFINITY && $to <= POSITIVE_INFINITY;
 
     # Internally we store inclusive/exclusive ranges to
     # simplify comparisons, hence '$to + 1'
-    $cb->( $from, $to + 1 );
+    $cb->( _pack( $from ), _pack( $to + 1 ) );
   }
 }
 

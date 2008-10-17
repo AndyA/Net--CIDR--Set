@@ -43,7 +43,7 @@ sub brute_force_card_in_range {
   my $min    = $members[0];
   my $max    = $members[-1];
   my $stride = int( ( $max - $min ) / 5 );
-  for ( my $lo = $min - $stride * 2; $lo <= $max + $stride * 2; $lo++ )
+  for ( my $lo = $min; $lo <= $max + $stride * 2; $lo++ )
   {
     $hi = $lo + $stride;
     my $want = brute_force_card_in_range( $lo, $hi, @members );
