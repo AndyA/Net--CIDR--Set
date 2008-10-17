@@ -2,7 +2,7 @@
 
 use strict;
 use warnings;
-use Test::More tests => 143;
+use Test::More tests => 148;
 use Net::CIDR::Set;
 
 {
@@ -95,17 +95,46 @@ use Net::CIDR::Set;
 
   my @case = (
     {
+      range => [ [ 0, 127, 0, 0, 1 ], [ 0, 127, 0, 0, 2 ] ],
+      generic => 0,
+      expect  => '127.0.0.1',
+    },
+    {
+      range => [ [ 0, 127, 0, 0, 1 ], [ 0, 127, 0, 0, 2 ] ],
+      generic => 1,
+      expect  => '127.0.0.1/32',
+    },
+    {
+      range => [ [ 0, 127, 0, 0, 1 ], [ 0, 127, 0, 0, 2 ] ],
+      generic => 2,
+      expect  => '127.0.0.1-127.0.0.1',
+    },
+    {
       range => [ [ 0, 192, 168, 0, 12 ], [ 0, 192, 168, 1, 14 ] ],
-      expect => '192.168.0.12-192.168.1.13',
+      generic => 0,
+      expect  => '192.168.0.12-192.168.1.13',
     },
     {
       range => [ [ 0, 0, 0, 0, 0 ], [ 1, 0, 0, 0, 0 ] ],
-      expect => '0.0.0.0-255.255.255.255',
+      generic => 0,
+      expect  => '0.0.0.0/0',
+    },
+    {
+      range => [ [ 0, 0, 0, 0, 0 ], [ 1, 0, 0, 0, 0 ] ],
+      generic => 1,
+      expect  => '0.0.0.0/0',
+    },
+    {
+      range => [ [ 0, 0, 0, 0, 0 ], [ 1, 0, 0, 0, 0 ] ],
+      generic => 2,
+      expect  => '0.0.0.0-255.255.255.255',
     },
   );
   for my $case ( @case ) {
-    my $got = Net::CIDR::Set->_encode_ipv4( map { pack 'C*', @$_ }
-       @{ $case->{range} } );
+    my $got
+     = Net::CIDR::Set->_encode_ipv4(
+      ( map { pack 'C*', @$_ } @{ $case->{range} } ),
+      $case->{generic} );
     is $got, $case->{expect}, "$got";
   }
 }

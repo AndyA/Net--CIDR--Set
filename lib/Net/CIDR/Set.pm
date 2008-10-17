@@ -2,9 +2,9 @@ package Net::CIDR::Set;
 
 use warnings;
 use strict;
-use Carp;
-use Data::Types qw(is_int);
-use List::Util qw(min max);
+use Carp qw( croak confess );
+use Net::CIDR::Set::IPv4;
+use Net::CIDR::Set::IPv6;
 
 =head1 NAME
 
@@ -54,19 +54,19 @@ Pack an IPv4 or IPv6 address into our internal bit vector format.
 
 =cut
 
-sub encode {
+sub decode {
   my $self = shift;
   my $ip   = shift;
-  if ( _decode_ipv4( $ip ) ) {
+  if ( $self->_decode_ipv4( $ip ) ) {
     bless $self, 'Net::CIDR::Set::IPv4';
   }
-  elsif ( _decode_ipv6( $ip ) ) {
+  elsif ( -$self->_decode_ipv6( $ip ) ) {
     bless $self, 'Net::CIDR::Set::IPv6';
   }
   else {
     croak "Can't parse address $ip";
   }
-  return $self->encode( $ip );
+  return $self->decode( $ip );
 }
 
 sub _nbits {
@@ -74,7 +74,7 @@ sub _nbits {
    . "kind of data I'm dealing with";
 }
 
-*decode = *_nbits;
+*encode = *_nbits;
 
 # IPv4
 
@@ -133,10 +133,31 @@ sub _decode_ipv4 {
   }
 }
 
+sub _is_cidr {
+  my ( $lo, $hi ) = @_;
+  my $mask = ~( $lo ^ $hi );
+  my $bits = unpack 'b*', $mask;
+  return unless $bits =~ /^(1*)0*$/;
+  return length( $1 ) - 8;
+}
+
 sub _encode_ipv4 {
-  my ( $self, $lo, $hi ) = @_;
-  # Just spit out a range for now
-  return join '-', _unpack_ipv4( $lo ), _unpack_ipv4( _dec( $hi ) );
+  my $self    = shift;
+  my $lo      = shift;
+  my $hi      = _dec( shift );
+  my $generic = shift || 0;
+  if ( $generic < 1 && $lo eq $hi ) {
+    # Single address
+    return _unpack_ipv4( $lo );
+  }
+  elsif ( $generic < 2 && defined( my $w = _is_cidr( $lo, $hi ) ) ) {
+    # Valid CIDR range
+    return join '/', _unpack_ipv4( $lo ), $w;
+  }
+  else {
+    # General range
+    return join '-', _unpack_ipv4( $lo ), _unpack_ipv4( $hi );
+  }
 }
 
 # IPv6
@@ -181,10 +202,12 @@ sub _compress_ipv6 {
 
 sub _decode_ipv6 {
   my ( $self, $ip ) = @_;
+  confess "Can't do IPv6 yet";
 }
 
 sub _encode_ipv6 {
   my ( $self, $lo, $hi ) = @_;
+  confess "Can't do IPv6 yet";
 }
 
 sub invert {
@@ -227,99 +250,91 @@ sub copy {
   return $copy;
 }
 
+sub _add_range {
+  my ( $self, $from, $to ) = @_;
+  my $fpos = $self->_find_pos( $from );
+  my $tpos = $self->_find_pos( $to, $fpos );
+
+  $from = $self->{ranges}[ --$fpos ] if ( $fpos & 1 );
+  $to   = $self->{ranges}[ $tpos++ ] if ( $tpos & 1 );
+
+  splice @{ $self->{ranges} }, $fpos, $tpos - $fpos, ( $from, $to );
+}
+
 sub add {
   my $self = shift;
-  $self->add_range( $self->_list_to_ranges( @_ ) );
+  $self->_iterate_ranges( @_, sub { $self->_add_range( @_ ) } );
 }
 
 sub remove {
   my $self = shift;
-  $self->remove_range( $self->_list_to_ranges( @_ ) );
+
+  $self->invert;
+  $self->add( @_ );
+  $self->invert;
 }
 
-sub add_range {
+sub _iterate_runs {
   my $self = shift;
 
-  $self->_iterate_ranges(
-    @_,
-    sub {
-      my ( $from, $to ) = @_;
+  my $pos   = 0;
+  my $limit = scalar( @{ $self->{ranges} } );
 
-      my $fpos = $self->_find_pos( $from );
-      # TODO: Maths?
-      my $tpos = $self->_find_pos( _pack( _unpack( $to ) + 1 ), $fpos );
-
-      $from = $self->{ranges}[ --$fpos ] if ( $fpos & 1 );
-      $to   = $self->{ranges}[ $tpos++ ] if ( $tpos & 1 );
-
-      splice @{ $self->{ranges} }, $fpos, $tpos - $fpos, ( $from, $to );
-    }
-  );
+  return sub {
+    return if $pos >= $limit;
+    my @r = ( $self->{ranges}[$pos], $self->{ranges}[ $pos + 1 ] );
+    $pos += 2;
+    return @r;
+  };
 }
 
-sub add_from_string {
+sub iterate_addresses {
+}
+
+sub iterate_cidr {
+}
+
+sub iterate_ranges {
   my $self = shift;
+  my $iter = $self->_iterate_runs;
+  # Iterate ranges
+  return sub {
+    return unless my @r = $iter->();
+    return $self->encode( @r, @_ );
+  };
+}
 
-  my $ctl          = {};
-  my $match_number = qr/\s* (-?\d+) \s*/x;
-  my $match_single = qr/^ $match_number $/x;
-  my $match_range;
-
-  my @to_add = ();
-
-  # Iterate args. Default punctuation spec prepended.
-  for my $el ( { sep => qr/,/, range => qr/-/, }, @_ ) {
-
-    # Allow parsing options to be set.
-    if ( 'HASH' eq ref $el ) {
-      %$ctl = ( %$ctl, %$el );
-      for ( values %$ctl ) {
-        $_ = quotemeta( $_ ) unless ref $_ eq 'Regexp';
-      }
-      $match_range = qr/^ $match_number $ctl->{range} $match_number $/x;
-    }
-    else {
-      for my $part ( split $ctl->{sep}, $el ) {
-        if ( my ( $start, $end ) = ( $part =~ $match_range ) ) {
-          push @to_add, $start, $end;
-        }
-        elsif ( my ( $el ) = ( $part =~ $match_single ) ) {
-          push @to_add, $el, $el;
-        }
-        else {
-          croak "Invalid range string"
-           unless $part =~ $match_single;
-        }
-      }
-    }
+sub as_array {
+  my ( $self, $iter ) = @_;
+  my @addr = ();
+  while ( my $addr = $iter->() ) {
+    push @addr, $addr;
   }
-
-  $self->add_range( @to_add );
+  return @addr;
 }
 
-sub remove_range {
+sub as_address_array {
   my $self = shift;
-
-  $self->invert;
-  $self->add_range( @_ );
-  $self->invert;
+  return $self->as_array( $self->iterate_addresses( @_ ) );
 }
 
-sub remove_from_string {
+sub as_cidr_array {
   my $self = shift;
+  return $self->as_array( $self->iterate_cidr( @_ ) );
+}
 
-  $self->invert;
-  $self->add_from_string( @_ );
-  $self->invert;
+sub as_range_array {
+  my $self = shift;
+  return $self->as_array( $self->iterate_ranges( @_ ) );
 }
 
 sub merge {
   my $self = shift;
 
   for my $other ( @_ ) {
-    my $iter = $other->iterate_runs;
+    my $iter = $other->_iterate_runs;
     while ( my ( $from, $to ) = $iter->() ) {
-      $self->add_range( $from, $to );
+      $self->_add_range( $from, $to );
     }
   }
 }
@@ -366,6 +381,8 @@ sub is_empty {
   return @{ $self->{ranges} } == 0;
 }
 
+=for later
+
 *contains = *contains_all;
 
 sub contains_any {
@@ -400,17 +417,7 @@ sub contains_all_range {
   return ( $pos & 1 ) && _pack( $hi ) lt $self->{ranges}[$pos];
 }
 
-sub cardinality {
-  my $self = shift;
-
-  my $card = 0;
-  my $iter = $self->iterate_runs( @_ );
-  while ( my ( $from, $to ) = $iter->() ) {
-    $card += $to - $from + 1;
-  }
-
-  return $card;
-}
+=cut
 
 sub superset {
   my $other = pop;
@@ -450,100 +457,21 @@ sub equals {
   return 1;
 }
 
+## Please see file perltidy.ERR
+## Please see file perltidy.ERR
+## Please see file perltidy.ERR
+## Please see file perltidy.ERR
+## Please see file perltidy.ERR
+## Please see file perltidy.ERR
+## Please see file perltidy.ERR
 sub as_array {
   my $self = shift;
-  my @ar   = ();
-  my $iter = $self->iterate_runs;
-  while ( my ( $from, $to ) = $iter->() ) {
-    push @ar, ( $from .. $to );
-  }
-
-  return @ar;
+  confess "Please write me";
 }
 
 sub as_string {
   my $self = shift;
-  my $ctl = { sep => ',', range => '-' };
-  %$ctl = ( %$ctl, %{ $_[0] } ) if @_;
-  my $iter = $self->iterate_runs;
-  my @runs = ();
-  while ( my ( $from, $to ) = $iter->() ) {
-    push @runs,
-     $from eq $to ? $from : join( $ctl->{range}, $from, $to );
-  }
-  return join( $ctl->{sep}, @runs );
-}
-
-sub iterate_runs {
-  my $self = shift;
-
-  if ( @_ ) {
-
-    # Clipped iterator
-    my ( $clip_lo, $clip_hi ) = map { _pack( $_ ) } @_;
-
-    my $pos = $self->_find_pos( $clip_lo ) & ~1;
-    my $limit
-     = (
-      $self->_find_pos( _pack( _unpack( $clip_hi ) + 1 ), $pos ) + 1 )
-     & ~1;
-
-    return sub {
-      TRY: {
-        return if $pos >= $limit;
-
-        # TODO: Maths
-        my @r = (
-          $self->{ranges}[$pos],
-          _pack( _unpack( $self->{ranges}[ $pos + 1 ] ) - 1 )
-        );
-        $pos += 2;
-
-        # Catch some edge cases
-        redo TRY if $r[1] lt $clip_lo;
-        return   if $r[0] gt $clip_hi;
-
-        # Clip to range
-        $r[0] = $clip_lo if $r[0] lt $clip_lo;
-        $r[1] = $clip_hi if $r[1] gt $clip_hi;
-
-        return map { _unpack( $_ ) } @r;
-      }
-    };
-  }
-  else {
-
-    # Unclipped iterator
-    my $pos   = 0;
-    my $limit = scalar( @{ $self->{ranges} } );
-
-    return sub {
-      return if $pos >= $limit;
-      my @r = (
-        _unpack( $self->{ranges}[$pos] ),
-        _unpack( $self->{ranges}[ $pos + 1 ] ) - 1
-      );
-      $pos += 2;
-      return @r;
-    };
-  }
-
-}
-
-sub _list_to_ranges {
-  my $self   = shift;
-  my @list   = sort { $a <=> $b } @_;
-  my @ranges = ();
-  my $count  = scalar( @list );
-  my $pos    = 0;
-  while ( $pos < $count ) {
-    my $end = $pos + 1;
-    $end++ while $end < $count && $list[$end] le $list[ $end - 1 ] + 1;
-    push @ranges, ( $list[$pos], $list[ $end - 1 ] );
-    $pos = $end;
-  }
-
-  return @ranges;
+  confess "Please write me";
 }
 
 # Return the index of the first element >= the supplied value. If the
@@ -576,23 +504,10 @@ sub _iterate_ranges {
   my $self = shift;
   my $cb   = pop;
 
-  my $count = scalar( @_ );
-
-  croak "Range list must have an even number of elements"
-   if ( $count % 2 ) != 0;
-
-  for ( my $p = 0; $p < $count; $p += 2 ) {
-    my ( $from, $to ) = ( $_[$p], $_[ $p + 1 ] );
-    croak "Range limits must be integers"
-     unless is_int( $from ) && is_int( $to );
-    croak "Range limits must be in ascending order"
-     unless $from <= $to;
-    #croak "Value out of range"
-    #unless $from >= NEGATIVE_INFINITY && $to <= POSITIVE_INFINITY;
-
-    # Internally we store inclusive/exclusive ranges to
-    # simplify comparisons, hence '$to + 1'
-    $cb->( _pack( $from ), _pack( $to + 1 ) );
+  for my $ip ( @_ ) {
+    my ( $lo, $hi ) = $self->decode( $ip )
+     or croak "Can't parse $ip";
+    $cb->( $lo, $hi );
   }
 }
 
