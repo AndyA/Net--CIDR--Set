@@ -52,7 +52,7 @@ use Net::CIDR::Set;
 }
 
 {
-  # _decode_ipv4
+  # _encode_ipv4
   my @case = (
     {
       ip     => '127.0.0.1',
@@ -85,13 +85,13 @@ use Net::CIDR::Set;
   );
   for my $case ( @case ) {
     my @got = map { [ unpack 'C*', $_ ] }
-     Net::CIDR::Set->_decode_ipv4( $case->{ip} );
-    is_deeply [@got], $case->{expect}, "decode $case->{ip}";
+     Net::CIDR::Set->_encode_ipv4( $case->{ip} );
+    is_deeply [@got], $case->{expect}, "encode $case->{ip}";
   }
 }
 
 {
-  # _encode_ipv4
+  # _decode_ipv4
 
   my @case = (
     {
@@ -132,7 +132,7 @@ use Net::CIDR::Set;
   );
   for my $case ( @case ) {
     my $got
-     = Net::CIDR::Set->_encode_ipv4(
+     = Net::CIDR::Set->_decode_ipv4(
       ( map { pack 'C*', @$_ } @{ $case->{range} } ),
       $case->{generic} );
     is $got, $case->{expect}, "$got";

@@ -52,17 +52,6 @@ sub _find_pos {
   return $low;
 }
 
-sub _iterate_ranges {
-  my $self = shift;
-  my $cb   = pop;
-
-  for my $ip ( @_ ) {
-    my ( $lo, $hi ) = $self->decode( $ip )
-     or croak "Can't parse $ip";
-    $cb->( $lo, $hi );
-  }
-}
-
 # Hideously slow - but we don't do them often
 
 sub _inc {
@@ -83,20 +72,20 @@ sub _dec {
   return pack 'C*', reverse @b;
 }
 
-sub decode {
+sub encode {
   my $self = shift;
   my $ip   = shift;
-  if ( $self->_decode_ipv4( $ip ) ) {
+  if ( $self->_encode_ipv4( $ip ) ) {
     bless $self, 'Net::CIDR::Set::IPv4';
   }
-  elsif ( $self->_decode_ipv6( $ip ) ) {
+  elsif ( $self->_encode_ipv6( $ip ) ) {
     bless $self, 'Net::CIDR::Set::IPv6';
   }
   else {
     # TODO: Error handling after rebless?
     croak "Can't parse address $ip";
   }
-  return $self->decode( $ip );
+  return $self->encode( $ip );
 }
 
 sub _nbits {
@@ -104,7 +93,7 @@ sub _nbits {
    . "kind of data I'm dealing with";
 }
 
-*encode = *_nbits;
+*decode = *_nbits;
 
 # IPv4
 
@@ -141,7 +130,7 @@ sub _ip2bits {
   return $ip;
 }
 
-sub _decode_ipv4 {
+sub _encode_ipv4 {
   my ( $self, $ip ) = @_;
   if ( $ip =~ m{^(.+?)/(.+)$} ) {
     return unless my $addr = _pack_ipv4( $1 );
@@ -159,7 +148,7 @@ sub _decode_ipv4 {
     return ( $lo, _inc( $hi ) );
   }
   else {
-    return $self->_decode_ipv4( "$ip/32" );
+    return $self->_encode_ipv4( "$ip/32" );
   }
 }
 
@@ -171,7 +160,7 @@ sub _is_cidr {
   return length( $1 ) - 8;
 }
 
-sub _encode_ipv4 {
+sub _decode_ipv4 {
   my $self    = shift;
   my $lo      = shift;
   my $hi      = _dec( shift );
@@ -230,12 +219,12 @@ sub _compress_ipv6 {
   return $ip;
 }
 
-sub _decode_ipv6 {
+sub _encode_ipv6 {
   my ( $self, $ip ) = @_;
   confess "Can't do IPv6 yet";
 }
 
-sub _encode_ipv6 {
+sub _decode_ipv6 {
   my ( $self, $lo, $hi ) = @_;
   confess "Can't do IPv6 yet";
 }
@@ -292,8 +281,12 @@ sub _add_range {
 }
 
 sub add {
-  my $self = shift;
-  $self->_iterate_ranges( @_, sub { $self->_add_range( @_ ) } );
+  my ( $self, @addr ) = @_;
+  for my $ip ( @addr ) {
+    my ( $lo, $hi ) = $self->encode( $ip )
+     or croak "Can't parse $ip";
+    $self->_add_range( $lo, $hi );
+  }
 }
 
 sub remove {
@@ -327,7 +320,7 @@ sub iterate_addresses {
       @r = $iter->() or return unless @r;
       unless ( $r[0] eq $r[1] ) {
         ( my $last, $r[0] ) = ( $r[0], _inc( $r[0] ) );
-        return $self->encode( $last, $r[0], @args );
+        return $self->decode( $last, $r[0], @args );
       }
       @r = ();
     }
@@ -350,7 +343,7 @@ sub iterate_cidr {
           my $next = _inc( $r[0] | $mask );
           if ( $next le $r[1] ) {
             ( my $last, $r[0] ) = ( $r[0], $next );
-            return $self->encode( $last, $r[0], @args );
+            return $self->decode( $last, $r[0], @args );
           }
           $pad--;
         }
@@ -365,7 +358,7 @@ sub iterate_ranges {
   my $iter = $self->_iterate_runs;
   return sub {
     return unless my @r = $iter->();
-    return $self->encode( @r, @args );
+    return $self->decode( @r, @args );
   };
 }
 

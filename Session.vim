@@ -296,22 +296,6 @@ setlocal nowinfixheight
 setlocal nowinfixwidth
 setlocal wrap
 setlocal wrapmargin=0
-292
-normal zo
-296
-normal zo
-297
-normal zo
-296
-normal zo
-292
-normal zo
-309
-normal zo
-312
-normal zo
-309
-normal zo
 let s:l = 307 - ((29 * winheight(0) + 21) / 42)
 if s:l < 1 | let s:l = 1 | endif
 exe s:l
