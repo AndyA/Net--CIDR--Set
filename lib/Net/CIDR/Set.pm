@@ -289,18 +289,28 @@ sub _iterate_runs {
 }
 
 sub iterate_addresses {
+  my ( $self, @args ) = @_;
+  my $iter = $self->_iterate_runs;
+  my @r    = ();
+  return sub {
+    while ( 1 ) {
+      @r = $iter->() or return unless @r;
+      return $self->encode( $r[0], $r[0] = _inc( $r[0] ), @args )
+       unless $r[0] eq $r[1];
+      @r = ();
+    }
+  };
 }
 
 sub iterate_cidr {
 }
 
 sub iterate_ranges {
-  my $self = shift;
+  my ( $self, @args ) = @_;
   my $iter = $self->_iterate_runs;
-  # Iterate ranges
   return sub {
     return unless my @r = $iter->();
-    return $self->encode( @r, @_ );
+    return $self->encode( @r, @args );
   };
 }
 
@@ -455,23 +465,6 @@ sub equals {
   }
 
   return 1;
-}
-
-## Please see file perltidy.ERR
-## Please see file perltidy.ERR
-## Please see file perltidy.ERR
-## Please see file perltidy.ERR
-## Please see file perltidy.ERR
-## Please see file perltidy.ERR
-## Please see file perltidy.ERR
-sub as_array {
-  my $self = shift;
-  confess "Please write me";
-}
-
-sub as_string {
-  my $self = shift;
-  confess "Please write me";
 }
 
 # Return the index of the first element >= the supplied value. If the
