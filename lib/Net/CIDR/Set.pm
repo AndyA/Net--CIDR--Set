@@ -21,7 +21,7 @@ our $VERSION = '0.10';
 sub new {
   my $class = shift;
   my $self = bless { ranges => [] }, $class;
-  $self->add_from_string( @_ ) if @_;
+  $self->add( @_ ) if @_;
   return $self;
 }
 

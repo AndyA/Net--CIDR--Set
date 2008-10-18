@@ -46,8 +46,7 @@ use Net::CIDR::Set;
       '192.168.64.0/18', '192.168.128.0/17'
      ],
      "got cidr";
-    my $s2 = Net::CIDR::Set->new;
-    $s2->add( @got );
+    my $s2 = Net::CIDR::Set->new(@got);
     ok $set->equals( $s2 ), "can reparse";
   }
 }
