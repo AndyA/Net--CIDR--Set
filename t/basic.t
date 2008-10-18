@@ -28,8 +28,7 @@ use Net::CIDR::Set;
     is_deeply [@got],
      [ '192.168.0.0-192.168.0.64', '192.168.0.66-192.168.255.255' ],
      "got range";
-    my $s2 = Net::CIDR::Set->new;
-    $s2->add( @got );
+    my $s2 = Net::CIDR::Set->new( @got );
     ok $set->equals( $s2 ), "can reparse";
   }
   {
@@ -46,7 +45,7 @@ use Net::CIDR::Set;
       '192.168.64.0/18', '192.168.128.0/17'
      ],
      "got cidr";
-    my $s2 = Net::CIDR::Set->new(@got);
+    my $s2 = Net::CIDR::Set->new( @got );
     ok $set->equals( $s2 ), "can reparse";
   }
 }

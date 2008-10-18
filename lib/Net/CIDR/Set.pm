@@ -25,8 +25,43 @@ sub new {
   return $self;
 }
 
-sub _pack { pack 'N', shift }
-sub _unpack { unpack 'N', shift }
+# Return the index of the first element >= the supplied value. If the
+# supplied value is larger than any element in the list the returned
+# value will be equal to the size of the list.
+sub _find_pos {
+  my $self = shift;
+  my $val  = shift;
+  my $low  = shift || 0;
+
+  my $high = scalar( @{ $self->{ranges} } );
+
+  while ( $low < $high ) {
+    my $mid = int( ( $low + $high ) / 2 );
+    my $cmp = $val cmp $self->{ranges}[$mid];
+    if ( $cmp < 0 ) {
+      $high = $mid;
+    }
+    elsif ( $cmp > 0 ) {
+      $low = $mid + 1;
+    }
+    else {
+      return $mid;
+    }
+  }
+
+  return $low;
+}
+
+sub _iterate_ranges {
+  my $self = shift;
+  my $cb   = pop;
+
+  for my $ip ( @_ ) {
+    my ( $lo, $hi ) = $self->decode( $ip )
+     or croak "Can't parse $ip";
+    $cb->( $lo, $hi );
+  }
+}
 
 # Hideously slow - but we don't do them often
 
@@ -48,22 +83,17 @@ sub _dec {
   return pack 'C*', reverse @b;
 }
 
-=head2 C<< pack >>
-
-Pack an IPv4 or IPv6 address into our internal bit vector format.
-
-=cut
-
 sub decode {
   my $self = shift;
   my $ip   = shift;
   if ( $self->_decode_ipv4( $ip ) ) {
     bless $self, 'Net::CIDR::Set::IPv4';
   }
-  elsif ( -$self->_decode_ipv6( $ip ) ) {
+  elsif ( $self->_decode_ipv6( $ip ) ) {
     bless $self, 'Net::CIDR::Set::IPv6';
   }
   else {
+    # TODO: Error handling after rebless?
     croak "Can't parse address $ip";
   }
   return $self->decode( $ip );
@@ -282,7 +312,7 @@ sub _iterate_runs {
 
   return sub {
     return if $pos >= $limit;
-    my @r = ( $self->{ranges}[$pos], $self->{ranges}[ $pos + 1 ] );
+    my @r = @{ $self->{ranges} }[ $pos, $pos + 1 ];
     $pos += 2;
     return @r;
   };
@@ -316,7 +346,7 @@ sub iterate_cidr {
         my $pad = length $1;
         while ( $pad >= 0 ) {
           my $mask = pack 'B*',
-           ( '0' x (length( $bits ) - $pad) ) . ( '1' x $pad );
+           ( '0' x ( length( $bits ) - $pad ) ) . ( '1' x $pad );
           my $next = _inc( $r[0] | $mask );
           if ( $next le $r[1] ) {
             ( my $last, $r[0] ) = ( $r[0], $next );
@@ -416,44 +446,6 @@ sub is_empty {
   return @{ $self->{ranges} } == 0;
 }
 
-=for later
-
-*contains = *contains_all;
-
-sub contains_any {
-  my $self = shift;
-
-  for my $i ( @_ ) {
-    my $pos = $self->_find_pos( _pack( $i + 1 ) );
-    return 1 if $pos & 1;
-  }
-
-  return;
-}
-
-sub contains_all {
-  my $self = shift;
-
-  for my $i ( @_ ) {
-    my $pos = $self->_find_pos( _pack( $i + 1 ) );
-    return unless $pos & 1;
-  }
-
-  return 1;
-}
-
-sub contains_all_range {
-  my $self = shift;
-  my ( $lo, $hi ) = @_;
-
-  croak "Range limits must be in ascending order" if $lo > $hi;
-
-  my $pos = $self->_find_pos( _pack( $lo + 1 ) );
-  return ( $pos & 1 ) && _pack( $hi ) lt $self->{ranges}[$pos];
-}
-
-=cut
-
 sub superset {
   my $other = pop;
   return $other->subset( reverse( @_ ) );
@@ -491,44 +483,6 @@ sub equals {
 
   return 1;
 }
-
-# Return the index of the first element >= the supplied value. If the
-# supplied value is larger than any element in the list the returned
-# value will be equal to the size of the list.
-sub _find_pos {
-  my $self = shift;
-  my $val  = shift;
-  my $low  = shift || 0;
-
-  my $high = scalar( @{ $self->{ranges} } );
-
-  while ( $low < $high ) {
-    my $mid = int( ( $low + $high ) / 2 );
-    if ( $val lt $self->{ranges}[$mid] ) {
-      $high = $mid;
-    }
-    elsif ( $val gt $self->{ranges}[$mid] ) {
-      $low = $mid + 1;
-    }
-    else {
-      return $mid;
-    }
-  }
-
-  return $low;
-}
-
-sub _iterate_ranges {
-  my $self = shift;
-  my $cb   = pop;
-
-  for my $ip ( @_ ) {
-    my ( $lo, $hi ) = $self->decode( $ip )
-     or croak "Can't parse $ip";
-    $cb->( $lo, $hi );
-  }
-}
-
 1;
 __END__
 
