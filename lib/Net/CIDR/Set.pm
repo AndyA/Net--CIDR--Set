@@ -98,17 +98,15 @@ sub _nbits {
 # IPv4
 
 sub _pack_ipv4 {
-  my @nums = split /\./, shift(), -1;
+  my @nums = split /[.]/, shift, -1;
   return unless @nums == 4;
   for ( @nums ) {
     return unless /^\d{1,3}$/ and $_ < 256;
   }
-  return pack( "CC*", 0, @nums );
+  return pack "CC*", 0, @nums;
 }
 
-sub _unpack_ipv4 {
-  return join( ".", unpack( "xC*", shift ) );
-}
+sub _unpack_ipv4 { join ".", unpack "xC*", shift }
 
 sub _width2bits {
   my ( $width, $size ) = @_;
@@ -120,7 +118,7 @@ sub _ip2bits {
   my $ip = shift or return;
   vec( $ip, 0, 8 ) = 255;
   my $bits = unpack 'B*', $ip;
-  return unless $bits =~ /^1*0*$/;
+  return unless $bits =~ /^1*0*$/;    # Valid mask?
   return $ip;
 }
 
@@ -227,30 +225,25 @@ sub invert {
   my $self = shift;
 
   my @pad = ( 0 ) x ( $self->_nbits / 8 );
-
   my ( $min, $max ) = map { pack 'C*', $_, @pad } 0, 1;
 
   if ( $self->is_empty ) {
-    # Empty set
     $self->{ranges} = [ $min, $max ];
+    return;
+  }
+
+  if ( $self->{ranges}[0] eq $min ) {
+    shift @{ $self->{ranges} };
   }
   else {
+    unshift @{ $self->{ranges} }, $min;
+  }
 
-    # Either add or remove infinity from each end. The net
-    # effect is always an even number of additions and deletions
-    if ( $self->{ranges}[0] eq $min ) {
-      shift @{ $self->{ranges} };
-    }
-    else {
-      unshift @{ $self->{ranges} }, $min;
-    }
-
-    if ( $self->{ranges}[-1] eq $max ) {
-      pop @{ $self->{ranges} };
-    }
-    else {
-      push @{ $self->{ranges} }, $max;
-    }
+  if ( $self->{ranges}[-1] eq $max ) {
+    pop @{ $self->{ranges} };
+  }
+  else {
+    push @{ $self->{ranges} }, $max;
   }
 }
 
@@ -258,7 +251,6 @@ sub copy {
   my $self  = shift;
   my $class = ref $self;
   my $copy  = $class->new;
-  # TODO: we can do better than this.
   @{ $copy->{ranges} } = @{ $self->{ranges} };
   return $copy;
 }
@@ -380,6 +372,8 @@ sub as_range_array {
 sub merge {
   my $self = shift;
 
+  # TODO: This isn't very efficient - and merge gets called from all
+  # sorts of other places.
   for my $other ( @_ ) {
     my $iter = $other->_iterate_runs;
     while ( my ( $from, $to ) = $iter->() ) {
@@ -477,10 +471,6 @@ __END__
 Andy Armstrong C<< <andy@hexten.net> >>
 
 =head1 CREDITS
-
-K. J. Cheetham L<< http://www.shadowcatsystems.co.uk/ >> for
-add_from_string, remove_from_string. I butchered his code so any
-errors are mine.
 
 =head1 LICENCE AND COPYRIGHT
 
