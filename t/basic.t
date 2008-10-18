@@ -57,7 +57,6 @@ use Net::CIDR::Set;
   for my $priv ( @private ) {
     $all_priv = $all_priv->union( $priv );
   }
-## Please see file perltidy.ERR
   my @got = $all_priv->as_cidr_array;
   is_deeply [@got],
    [ '10.0.0.0/8', '172.16.0.0/12', '192.168.0.0/16', ],
