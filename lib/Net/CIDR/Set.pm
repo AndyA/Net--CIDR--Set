@@ -93,7 +93,7 @@ sub _unpack_ipv4 {
 
 sub _width2bits {
   my ( $width, $size ) = @_;
-  return pack 'b*',
+  return pack 'B*',
    ( '1' x ( $width + 8 ) ) . ( '0' x ( $size - $width ) );
 }
 
@@ -106,7 +106,7 @@ sub _set_top_byte {
 sub _ip2bits {
   my $ip = shift or return;
   $ip = _set_top_byte( $ip );
-  my $bits = unpack 'b*', $ip;
+  my $bits = unpack 'B*', $ip;
   return unless $bits =~ /^1*0*$/;
   return $ip;
 }
@@ -136,7 +136,7 @@ sub _decode_ipv4 {
 sub _is_cidr {
   my ( $lo, $hi ) = @_;
   my $mask = ~( $lo ^ $hi );
-  my $bits = unpack 'b*', $mask;
+  my $bits = unpack 'B*', $mask;
   return unless $bits =~ /^(1*)0*$/;
   return length( $1 ) - 8;
 }
@@ -295,14 +295,39 @@ sub iterate_addresses {
   return sub {
     while ( 1 ) {
       @r = $iter->() or return unless @r;
-      return $self->encode( $r[0], $r[0] = _inc( $r[0] ), @args )
-       unless $r[0] eq $r[1];
+      unless ( $r[0] eq $r[1] ) {
+        ( my $last, $r[0] ) = ( $r[0], _inc( $r[0] ) );
+        return $self->encode( $last, $r[0], @args );
+      }
       @r = ();
     }
   };
 }
 
 sub iterate_cidr {
+  my ( $self, @args ) = @_;
+  my $iter = $self->_iterate_runs;
+  my @r    = ();
+  return sub {
+    while ( 1 ) {
+      @r = $iter->() or return unless @r;
+      unless ( $r[0] eq $r[1] ) {
+        ( my $bits = unpack 'B*', $r[0] ) =~ /(0*)$/;
+        my $pad = length $1;
+        while ( $pad >= 0 ) {
+          my $mask = pack 'B*',
+           ( '0' x (length( $bits ) - $pad) ) . ( '1' x $pad );
+          my $next = _inc( $r[0] | $mask );
+          if ( $next le $r[1] ) {
+            ( my $last, $r[0] ) = ( $r[0], $next );
+            return $self->encode( $last, $r[0], @args );
+          }
+          $pad--;
+        }
+      }
+      @r = ();
+    }
+  };
 }
 
 sub iterate_ranges {
