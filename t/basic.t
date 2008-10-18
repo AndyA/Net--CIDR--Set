@@ -2,7 +2,7 @@
 
 use strict;
 use warnings;
-use Test::More tests => 10;
+use Test::More tests => 11;
 use Net::CIDR::Set;
 
 {
@@ -48,6 +48,20 @@ use Net::CIDR::Set;
     my $s2 = Net::CIDR::Set->new( @got );
     ok $set->equals( $s2 ), "can reparse";
   }
+}
+
+{
+  my @private = map { Net::CIDR::Set->new( $_ ) } '10.0.0.0/8',
+   '192.168.0.0/16', '172.16.0.0/12';
+  my $all_priv = Net::CIDR::Set->new;
+  for my $priv ( @private ) {
+    $all_priv = $all_priv->union( $priv );
+  }
+## Please see file perltidy.ERR
+  my @got = $all_priv->as_cidr_array;
+  is_deeply [@got],
+   [ '10.0.0.0/8', '172.16.0.0/12', '192.168.0.0/16', ],
+   "union";
 }
 
 # vim:ts=2:sw=2:et:ft=perl

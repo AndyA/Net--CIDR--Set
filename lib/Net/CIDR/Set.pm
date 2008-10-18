@@ -221,6 +221,19 @@ sub _decode_ipv6 {
   confess "Can't do IPv6 yet";
 }
 
+sub _rebless_and_check {
+  my ( $self, @others ) = @_;
+  my $pkg   = __PACKAGE__;
+  my %class = ();
+  $class{$_}++ for map ref, $self, @others;
+  delete $class{$pkg};
+  my @found = sort keys %class;
+  croak "Can't mix ", $self->_conjunction( and => @found )
+   if @found > 1;
+  bless $self, $found[0] if $pkg eq ref $self;
+  return $self;
+}
+
 sub invert {
   my $self = shift;
 
@@ -369,8 +382,15 @@ sub as_range_array {
   return $self->as_array( $self->iterate_ranges( @_ ) );
 }
 
+sub _conjunction {
+  my ( $self, $conj, @list ) = @_;
+  my $last = pop @list;
+  return join " $conj ", join( ', ', @list ), $last;
+}
+
 sub merge {
   my $self = shift;
+  $self->_rebless_and_check( @_ );
 
   # TODO: This isn't very efficient - and merge gets called from all
   # sorts of other places.
@@ -388,6 +408,7 @@ sub compliment {
 
 sub complement {
   my $new = shift->copy;
+  # TODO: What if it's empty?
   $new->invert;
   return $new;
 }
