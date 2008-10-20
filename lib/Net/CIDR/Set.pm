@@ -326,8 +326,7 @@ sub contains_any {
 sub contains_all {
   my $self  = shift;
   my $class = ref $self;
-  my $want  = $class->new( @_ );
-  return $want->intersection( $self )->equals( $want );
+  return $class->new( @_ )->subset( $self );
 }
 
 sub _iterate_runs {
