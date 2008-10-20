@@ -14,6 +14,27 @@ Net::CIDR::Set - Manipulate sets of IP addresses
 
 This document describes Net::CIDR::Set version 0.10
 
+=head1 SYNOPSIS
+
+  use Net::CIDR::Set;
+
+  my $priv = Net::CIDR::Set->new( '10.0.0.0/8', '172.16.0.0/12',
+    '192.168.0.0/16' );
+  for my $ip ( @addr ) {
+    if ( $priv->contains( $ip ) ) {
+      print "$ip is private\n";
+    }
+  }
+
+=head2 DESCRIPTION
+
+C<Net::CIDR::Set> represents sets of IP addresses and allows standard
+set operations (union, intersection, membership test etc) to be
+performed on them.
+
+In spite of the name it can work with sets consisting of arbitrary
+ranges of IP addresses - not just CIDR blocks.
+
 =cut
 
 our $VERSION = '0.10';
@@ -292,6 +313,21 @@ sub remove {
   $self->invert;
   $self->add( @_ );
   $self->invert;
+}
+
+*contains = *contains_all;
+
+sub contains_any {
+  my $self  = shift;
+  my $class = ref $self;
+  return !$class->new( @_ )->intersection( $self )->is_empty;
+}
+
+sub contains_all {
+  my $self  = shift;
+  my $class = ref $self;
+  my $want  = $class->new( @_ );
+  return $want->intersection( $self )->equals( $want );
 }
 
 sub _iterate_runs {
