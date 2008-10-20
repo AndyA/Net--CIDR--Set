@@ -18,21 +18,21 @@ This document describes Net::CIDR::Set::IPv6 version 0.10
 
 our $VERSION = '0.10';
 
-=head2 C<< decode >>
+=head2 C<< _decode >>
 
 Encode an IPv6 address into our internal bit vector format.
 
 =cut
 
-sub decode { shift->_decode_ipv6( @_ ) }
+sub _decode { shift->_decode_ipv6( @_ ) }
 
-=head2 C<< encode >>
+=head2 C<< _encode >>
 
 Decode an IPv6 address from our internal bit vector format.
 
 =cut
 
-sub encode { shift->_encode_ipv6( @_ ) }
+sub _encode { shift->_encode_ipv6( @_ ) }
 
 sub _nbits { 128 }
 

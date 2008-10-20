@@ -8,7 +8,7 @@ use Net::CIDR::Set::IPv6;
 
 =head1 NAME
 
-Net::CIDR::Set - Pure Perl implementation.
+Net::CIDR::Set - Manipulate sets of IP addresses
 
 =head1 VERSION
 
@@ -52,8 +52,6 @@ sub _find_pos {
   return $low;
 }
 
-# Hideously slow - but we don't do them often
-
 sub _inc {
   my @b = reverse unpack 'C*', shift;
   for ( @b ) {
@@ -72,7 +70,7 @@ sub _dec {
   return pack 'C*', reverse @b;
 }
 
-sub encode {
+sub _encode {
   my $self = shift;
   my $ip   = shift;
   if ( $self->_encode_ipv4( $ip ) ) {
@@ -85,7 +83,7 @@ sub encode {
     # TODO: Error handling after rebless?
     croak "Can't parse address $ip";
   }
-  return $self->encode( $ip );
+  return $self->_encode( $ip );
 }
 
 sub _nbits {
@@ -93,7 +91,7 @@ sub _nbits {
    . "kind of data I'm dealing with";
 }
 
-*decode = *_nbits;
+*_decode = *_nbits;
 
 # IPv4
 
@@ -282,7 +280,7 @@ sub _add_range {
 sub add {
   my ( $self, @addr ) = @_;
   for my $ip ( @addr ) {
-    my ( $lo, $hi ) = $self->encode( $ip )
+    my ( $lo, $hi ) = $self->_encode( $ip )
      or croak "Can't parse $ip";
     $self->_add_range( $lo, $hi );
   }
@@ -317,7 +315,7 @@ sub iterate_addresses {
   return sub {
     while ( 1 ) {
       @r = $iter->() or return unless @r;
-      return $self->decode( ( my $last, $r[0] )
+      return $self->_decode( ( my $last, $r[0] )
         = ( $r[0], _inc( $r[0] ) ), @args )
        unless $r[0] eq $r[1];
       @r = ();
@@ -338,7 +336,7 @@ sub iterate_cidr {
         while ( 1 ) {
           my $next = _inc( $r[0] | pack 'B*',
             ( '0' x ( length( $bits ) - $pad ) ) . ( '1' x $pad ) );
-          return $self->decode( ( my $last, $r[0] ) = ( $r[0], $next ),
+          return $self->_decode( ( my $last, $r[0] ) = ( $r[0], $next ),
             @args )
            if $next le $r[1];
           $pad--;
@@ -354,7 +352,7 @@ sub iterate_ranges {
   my $iter = $self->_iterate_runs;
   return sub {
     return unless my @r = $iter->();
-    return $self->decode( @r, @args );
+    return $self->_decode( @r, @args );
   };
 }
 
@@ -489,37 +487,43 @@ __END__
 
 =head1 AUTHOR
 
-Andy Armstrong C<< <andy@hexten.net> >>
+Andy Armstrong  C<< <andy.armstrong@messagesystems.com> >>
 
 =head1 CREDITS
 
+The encode and decode routines were stolen en masse from Douglas
+Wilson's L<Net::CIDR::Lite>.
+
 =head1 LICENCE AND COPYRIGHT
 
-Copyright (c) 2006-2008, Andy Armstrong C<< <andy@hexten.net> >>. All
-rights reserved.
+This module is free software; you can redistribute it and/or
+modify it under the same terms as Perl itself. See L<perlartistic>.
 
-This module is free software; you can redistribute it and/or modify it
-under the same terms as Perl itself. See L<perlartistic>.
+Copyright (c) 2008, Message Systems, Inc.
+All rights reserved.
 
-=head1 DISCLAIMER OF WARRANTY
+Redistribution and use in source and binary forms, with or
+without modification, are permitted provided that the following
+conditions are met:
 
-BECAUSE THIS SOFTWARE IS LICENSED FREE OF CHARGE, THERE IS NO WARRANTY
-FOR THE SOFTWARE, TO THE EXTENT PERMITTED BY APPLICABLE LAW. EXCEPT WHEN
-OTHERWISE STATED IN WRITING THE COPYRIGHT HOLDERS AND/OR OTHER PARTIES
-PROVIDE THE SOFTWARE "AS IS" WITHOUT WARRANTY OF ANY KIND, EITHER
-EXPRESSED OR IMPLIED, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
-WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE. THE
-ENTIRE RISK AS TO THE QUALITY AND PERFORMANCE OF THE SOFTWARE IS WITH
-YOU. SHOULD THE SOFTWARE PROVE DEFECTIVE, YOU ASSUME THE COST OF ALL
-NECESSARY SERVICING, REPAIR, OR CORRECTION.
+    * Redistributions of source code must retain the above copyright
+      notice, this list of conditions and the following disclaimer.
+    * Redistributions in binary form must reproduce the above copyright
+      notice, this list of conditions and the following disclaimer in
+      the documentation and/or other materials provided with the
+      distribution.
+    * Neither the name Message Systems, Inc. nor the names of its
+      contributors may be used to endorse or promote products derived
+      from this software without specific prior written permission.
 
-IN NO EVENT UNLESS REQUIRED BY APPLICABLE LAW OR AGREED TO IN WRITING
-WILL ANY COPYRIGHT HOLDER, OR ANY OTHER PARTY WHO MAY MODIFY AND/OR
-REDISTRIBUTE THE SOFTWARE AS PERMITTED BY THE ABOVE LICENCE, BE
-LIABLE TO YOU FOR DAMAGES, INCLUDING ANY GENERAL, SPECIAL,
-INCIDENTAL, OR CONSEQUENTIAL DAMAGES ARISING OUT OF THE USE OR
-INABILITY TO USE THE SOFTWARE (INCLUDING BUT NOT LIMITED TO LOSS OF
-DATA OR DATA BEING RENDERED INACCURATE OR LOSSES SUSTAINED BY YOU OR
-THIRD PARTIES OR A FAILURE OF THE SOFTWARE TO OPERATE WITH ANY OTHER
-SOFTWARE), EVEN IF SUCH HOLDER OR OTHER PARTY HAS BEEN ADVISED OF THE
-POSSIBILITY OF SUCH DAMAGES.
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS
+IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED
+TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A
+PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER
+OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
+PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
+PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
+LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
+NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
