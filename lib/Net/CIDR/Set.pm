@@ -6,6 +6,8 @@ use Carp qw( croak confess );
 use Net::CIDR::Set::IPv4;
 use Net::CIDR::Set::IPv6;
 
+use overload '""' => 'as_string';
+
 =head1 NAME
 
 Net::CIDR::Set - Manipulate sets of IP addresses
@@ -91,165 +93,54 @@ sub _dec {
   return pack 'C*', reverse @b;
 }
 
+sub _guess_coder {
+  my ( $self, $ip ) = @_;
+  for my $class ( qw( Net::CIDR::Set::IPv4 Net::CIDR::Set::IPv6 ) ) {
+    my $coder = $class->new;
+    my @rep = eval { $coder->encode( $ip ) };
+    return $coder unless $@;
+  }
+  croak "Can't decode $ip as an IPv4 or IPv6 address";
+}
+
 sub _encode {
-  my $self = shift;
-  my $ip   = shift;
-  if ( $self->_encode_ipv4( $ip ) ) {
-    bless $self, 'Net::CIDR::Set::IPv4';
-  }
-  elsif ( $self->_encode_ipv6( $ip ) ) {
-    bless $self, 'Net::CIDR::Set::IPv6';
-  }
-  else {
-    # TODO: Error handling after rebless?
-    croak "Can't parse address $ip";
-  }
-  return $self->_encode( $ip );
-}
-
-sub _nbits {
-  croak "Please add an address so I know what "
-   . "kind of data I'm dealing with";
-}
-
-*_decode = *_nbits;
-
-# IPv4
-
-sub _pack_ipv4 {
-  my @nums = split /[.]/, shift, -1;
-  return unless @nums == 4;
-  for ( @nums ) {
-    return unless /^\d{1,3}$/ and $_ < 256;
-  }
-  return pack "CC*", 0, @nums;
-}
-
-sub _unpack_ipv4 { join ".", unpack "xC*", shift }
-
-sub _width2bits {
-  my ( $width, $size ) = @_;
-  return pack 'B*',
-   ( '1' x ( $width + 8 ) ) . ( '0' x ( $size - $width ) );
-}
-
-sub _ip2bits {
-  my $ip = shift or return;
-  vec( $ip, 0, 8 ) = 255;
-  my $bits = unpack 'B*', $ip;
-  return unless $bits =~ /^1*0*$/;    # Valid mask?
-  return $ip;
-}
-
-sub _encode_ipv4 {
   my ( $self, $ip ) = @_;
-  if ( $ip =~ m{^(.+?)/(.+)$} ) {
-    return unless my $addr = _pack_ipv4( $1 );
-    my $mask = $2;
-    return
-     unless my $bits
-       = ( $mask =~ /^\d+$/ )
-      ? _width2bits( $mask, 32 )
-      : _ip2bits( _pack_ipv4( $mask ) );
-    return ( $addr & $bits, _inc( $addr | ~$bits ) );
-  }
-  elsif ( $ip =~ m{^(.+?)-(.+)$} ) {
-    return unless my $lo = _pack_ipv4( $1 );
-    return unless my $hi = _pack_ipv4( $2 );
-    return ( $lo, _inc( $hi ) );
-  }
-  else {
-    return $self->_encode_ipv4( "$ip/32" );
+  my $cdr = $self->{coder} ||= $self->_guess_coder( $ip );
+  return $cdr->encode( $ip );
+}
+
+{
+  for my $dele ( qw( _decode _nbits ) ) {
+    no strict 'refs';
+    ( my $meth = $dele ) =~ s/^_//;
+    *{$dele} = sub {
+      my $self = shift;
+      my $cdr = $self->{coder} || croak "Don't know how to $meth yet";
+      return $cdr->$meth( @_ );
+    };
   }
 }
 
-sub _is_cidr {
-  my ( $lo, $hi ) = @_;
-  my $mask = ~( $lo ^ $hi );
-  my $bits = unpack 'B*', $mask;
-  return unless $bits =~ /^(1*)0*$/;
-  return length( $1 ) - 8;
+sub _conjunction {
+  my ( $self, $conj, @list ) = @_;
+  my $last = pop @list;
+  return join " $conj ", join( ', ', @list ), $last;
 }
 
-sub _decode_ipv4 {
-  my $self    = shift;
-  my $lo      = shift;
-  my $hi      = _dec( shift );
-  my $generic = shift || 0;
-  if ( $generic < 1 && $lo eq $hi ) {
-    # Single address
-    return _unpack_ipv4( $lo );
-  }
-  elsif ( $generic < 2 && defined( my $w = _is_cidr( $lo, $hi ) ) ) {
-    # Valid CIDR range
-    return join '/', _unpack_ipv4( $lo ), $w;
-  }
-  else {
-    # General range
-    return join '-', _unpack_ipv4( $lo ), _unpack_ipv4( $hi );
-  }
-}
-
-# IPv6
-
-sub _pack_ipv6 {
-  my $ip = shift;
-  return if $ip =~ /^:/ and $ip !~ s/^::/:/;
-  return if $ip =~ /:$/ and $ip !~ s/::$/:/;
-  my @nums = split /:/, $ip, -1;
-  return unless @nums <= 8;
-  my ( $empty, $ipv4, $str ) = ( 0, '', '' );
-  for ( @nums ) {
-    return if $ipv4;
-    $str .= "0" x ( 4 - length ) . $_, next if /^[a-fA-F\d]{1,4}$/;
-    do { return if $empty++ }, $str .= "X", next if $_ eq '';
-    next if $ipv4 = _pack_ipv4( $_ );
-    return;
-  }
-  return if $ipv4 and @nums > 6;
-  $str =~ s/X/"0" x (($ipv4 ? 25 : 33)-length($str))/e if $empty;
-  return pack( "H*", "00" . $str ) . $ipv4;
-}
-
-sub _unpack_ipv6 {
-  return _compress_ipv6(
-    join( ":", unpack( "xH*", shift ) =~ /..../g ) );
-}
-
-# Replace longest run of null blocks with a double colon
-sub _compress_ipv6 {
-  my $ip = shift;
-  if ( my @runs = $ip =~ /((?:(?:^|:)(?:0000))+:?)/g ) {
-    my $max = $runs[0];
-    for ( @runs[ 1 .. $#runs ] ) {
-      $max = $_ if length( $max ) < length;
-    }
-    $ip =~ s/$max/::/;
-  }
-  $ip =~ s/:0{1,3}/:/g;
-  return $ip;
-}
-
-sub _encode_ipv6 {
-  my ( $self, $ip ) = @_;
-  confess "Can't do IPv6 yet";
-}
-
-sub _decode_ipv6 {
-  my ( $self, $lo, $hi ) = @_;
-  confess "Can't do IPv6 yet";
-}
-
-sub _rebless_and_check {
+sub _check_and_coerce {
   my ( $self, @others ) = @_;
-  my $pkg   = __PACKAGE__;
-  my %class = ();
-  $class{$_}++ for map ref, $self, @others;
-  delete $class{$pkg};
-  my @found = sort keys %class;
-  croak "Can't mix ", $self->_conjunction( and => @found )
+
+  my %class = map {
+    eval { ( defined $_ && $_->nbits || '' ) => $_ }
+  } map { $_->{coder} } grep { defined } $self, @others;
+
+  my @found = sort grep $_, keys %class;
+
+  croak "Can't mix ", $self->_conjunction( and => @found ),
+   " bit addresses"
    if @found > 1;
-  bless $self, $found[0] if $pkg eq ref $self;
+
+  $self->{coder} ||= $class{ $found[0] };
   return $self;
 }
 
@@ -284,13 +175,14 @@ sub copy {
   my $class = ref $self;
   my $copy  = $class->new;
   @{ $copy->{ranges} } = @{ $self->{ranges} };
+  $copy->{coder} = $self->{coder};
   return $copy;
 }
 
 sub _add_range {
   my ( $self, $from, $to ) = @_;
   my $fpos = $self->_find_pos( $from );
-  my $tpos = $self->_find_pos( $to, $fpos );
+  my $tpos = $self->_find_pos( _inc( $to ), $fpos );
 
   $from = $self->{ranges}[ --$fpos ] if ( $fpos & 1 );
   $to   = $self->{ranges}[ $tpos++ ] if ( $tpos & 1 );
@@ -361,6 +253,7 @@ sub iterate_addresses {
 sub iterate_cidr {
   my ( $self, @args ) = @_;
   my $iter = $self->_iterate_runs;
+  my $size = $self->_nbits;
   my @r    = ();
   return sub {
     while ( 1 ) {
@@ -368,6 +261,7 @@ sub iterate_cidr {
       unless ( $r[0] eq $r[1] ) {
         ( my $bits = unpack 'B*', $r[0] ) =~ /(0*)$/;
         my $pad = length $1;
+        $pad = $size if $pad > $size;
         while ( 1 ) {
           my $next = _inc( $r[0] | pack 'B*',
             ( '0' x ( length( $bits ) - $pad ) ) . ( '1' x $pad ) );
@@ -415,15 +309,11 @@ sub as_range_array {
   return $self->as_array( $self->iterate_ranges( @_ ) );
 }
 
-sub _conjunction {
-  my ( $self, $conj, @list ) = @_;
-  my $last = pop @list;
-  return join " $conj ", join( ', ', @list ), $last;
-}
+sub as_string { join ', ', shift->as_range_array( @_ ) }
 
 sub merge {
   my $self = shift;
-  $self->_rebless_and_check( @_ );
+  $self->_check_and_coerce( @_ );
 
   # TODO: This isn't very efficient - and merge gets called from all
   # sorts of other places.
