@@ -2,7 +2,7 @@ package MyBuilder;
 
 BEGIN {
   require Module::Build;
-  @ISA = qw(Module::Build);
+  @ISA = qw( Module::Build );
 }
 
 sub ACTION_testauthor {
@@ -12,20 +12,18 @@ sub ACTION_testauthor {
 }
 
 sub ACTION_critic {
-  exec(
-    qw(perlcritic -1 -q -profile perlcriticrc
-     bin/prove lib/), glob( 't/*.t' )
-  );
+  exec qw( perlcritic -1 -q -profile perlcriticrc lib/ ), glob 't/*.t';
 }
 
 sub ACTION_tags {
   exec(
-    qw(ctags -f tags --recurse --totals
+    qw(
+     ctags -f tags --recurse --totals
      --exclude=blib
      --exclude=.svn
      --exclude='*~'
      --languages=Perl
-     t/ lib/ bin/prove
+     t/ lib/
      )
   );
 }
@@ -33,11 +31,7 @@ sub ACTION_tags {
 sub ACTION_tidy {
   my $self = shift;
 
-  my @extra = qw(
-   Build.PL
-   Makefile.PL
-   bin/prove
-  );
+  my @extra = qw( Build.PL );
 
   my %found_files = map { %$_ } $self->find_pm_files,
    $self->_find_file_by_type( 'pm', 't' ),
@@ -48,8 +42,8 @@ sub ACTION_tidy {
     map { $self->localize_file_path( $_ ) } @extra );
 
   for my $file ( @files ) {
-    system( 'perltidy', '-b', $file );
-    unlink( "$file.bak" ) if $? == 0;
+    system 'perltidy', '-b', $file;
+    unlink "$file.bak" if $? == 0;
   }
 }
 

@@ -14,13 +14,13 @@ use Net::CIDR::Set::IPv6;
     my $p = $n - 1;
     my $q = $n + 1;
     is unpack( 'N', Net::CIDR::Set::_inc( pack 'N', $p ) ), $n,
-      "_inc($p) == $n";
+     "_inc($p) == $n";
     is unpack( 'N', Net::CIDR::Set::_inc( pack 'N', $n ) ), $q,
-      "_inc($n) == $q";
+     "_inc($n) == $q";
     is unpack( 'N', Net::CIDR::Set::_dec( pack 'N', $n ) ), $p,
-      "_dec($n) == $p";
+     "_dec($n) == $p";
     is unpack( 'N', Net::CIDR::Set::_dec( pack 'N', $q ) ), $n,
-      "_dec($q) == $n";
+     "_dec($q) == $n";
   }
   my @big = (
     {
@@ -31,7 +31,7 @@ use Net::CIDR::Set::IPv6;
     {
       name => 'wrap some',
       before =>
-        [ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 255, 255, 255, 255, 255, 255 ],
+       [ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 255, 255, 255, 255, 255, 255 ],
       after => [ 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0 ]
     },
     {
@@ -46,7 +46,7 @@ use Net::CIDR::Set::IPv6;
   for my $b ( @big ) {
     my $name = $b->{name};
     my @inc  = unpack 'C*',
-      Net::CIDR::Set::_inc( pack 'C*', @{ $b->{before} } );
+     Net::CIDR::Set::_inc( pack 'C*', @{ $b->{before} } );
     is_deeply [@inc], $b->{after}, "$name: _inc";
     my @dec = unpack 'C*', Net::CIDR::Set::_dec( pack 'C*', @inc );
     is_deeply [@dec], $b->{before}, "$name: _dec";
@@ -86,7 +86,7 @@ use Net::CIDR::Set::IPv6;
   );
   for my $case ( @case ) {
     my @got = map { [ unpack 'C*', $_ ] }
-      Net::CIDR::Set::IPv4->encode( $case->{ip} );
+     Net::CIDR::Set::IPv4->encode( $case->{ip} );
     is_deeply [@got], $case->{expect}, "encode $case->{ip}";
   }
 }
@@ -131,7 +131,7 @@ use Net::CIDR::Set::IPv6;
   );
   for my $case ( @case ) {
     my $got
-      = Net::CIDR::Set::IPv4->decode(
+     = Net::CIDR::Set::IPv4->decode(
       ( map { pack 'C*', @$_ } @{ $case->{range} } ),
       $case->{generic} );
     is $got, $case->{expect}, "$got";

@@ -32,7 +32,7 @@ sub _unpack { join ".", unpack "xC*", shift }
 sub _width2bits {
   my ( $width, $size ) = @_;
   return pack 'B*',
-    ( '1' x ( $width + 8 ) ) . ( '0' x ( $size - $width ) );
+   ( '1' x ( $width + 8 ) ) . ( '0' x ( $size - $width ) );
 }
 
 sub _ip2bits {
@@ -57,8 +57,8 @@ sub _encode {
     return unless my $addr = _pack( $1 );
     my $mask = $2;
     return
-      unless my $bits
-        = ( $mask =~ /^\d+$/ )
+     unless my $bits
+       = ( $mask =~ /^\d+$/ )
       ? _width2bits( $mask, 32 )
       : _ip2bits( _pack( $mask ) );
     return ( $addr & $bits, Net::CIDR::Set::_inc( $addr | ~$bits ) );
@@ -76,7 +76,7 @@ sub _encode {
 sub encode {
   my ( $self, $ip ) = @_;
   return $self->_encode( $ip )
-    or croak "Can't parse $ip as an IPv4 address";
+   or croak "Can't parse $ip as an IPv4 address";
 }
 
 sub decode {
