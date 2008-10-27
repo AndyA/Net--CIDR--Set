@@ -69,16 +69,17 @@ if expand('%') == '' && !&modified && line('$') <= 1 && getline(1) == ''
   let s:wipebuf = bufnr('%')
 endif
 set shortmess=aoO
-badd +170 lib/Net/CIDR/Set.pm
+badd +159 lib/Net/CIDR/Set.pm
 badd +109 ~/Works/Perl/NotMine/Net-CIDR-Lite/Lite.pm
 badd +3 t/all-range.t
 badd +44 t/misc.t
 badd +10 andy/pack.pl
-badd +5 t/basic.t
+badd +11 t/basic.t
 badd +28 t/string.t
 badd +36 lib/Net/CIDR/Set/IPv4.pm
 badd +41 lib/Net/CIDR/Set/IPv6.pm
 badd +91 t/private.t
+badd +0 t/ipv6.t
 args lib/Net/CIDR/Set.pm
 edit lib/Net/CIDR/Set/IPv4.pm
 set splitbelow splitright
@@ -87,12 +88,18 @@ vsplit
 1wincmd h
 wincmd _ | wincmd |
 split
-1wincmd k
+wincmd _ | wincmd |
+split
+2wincmd k
+wincmd w
 wincmd w
 wincmd w
 wincmd _ | wincmd |
 split
-1wincmd k
+wincmd _ | wincmd |
+split
+2wincmd k
+wincmd w
 wincmd w
 set nosplitbelow
 set nosplitright
@@ -100,12 +107,16 @@ wincmd t
 set winheight=1 winwidth=1
 exe '1resize ' . ((&lines * 1 + 23) / 46)
 exe 'vert 1resize ' . ((&columns * 83 + 84) / 169)
-exe '2resize ' . ((&lines * 42 + 23) / 46)
+exe '2resize ' . ((&lines * 40 + 23) / 46)
 exe 'vert 2resize ' . ((&columns * 83 + 84) / 169)
 exe '3resize ' . ((&lines * 1 + 23) / 46)
-exe 'vert 3resize ' . ((&columns * 85 + 84) / 169)
-exe '4resize ' . ((&lines * 42 + 23) / 46)
+exe 'vert 3resize ' . ((&columns * 83 + 84) / 169)
+exe '4resize ' . ((&lines * 1 + 23) / 46)
 exe 'vert 4resize ' . ((&columns * 85 + 84) / 169)
+exe '5resize ' . ((&lines * 40 + 23) / 46)
+exe 'vert 5resize ' . ((&columns * 85 + 84) / 169)
+exe '6resize ' . ((&lines * 1 + 23) / 46)
+exe 'vert 6resize ' . ((&columns * 85 + 84) / 169)
 argglobal
 setlocal noautoindent
 setlocal nobinary
@@ -205,6 +216,105 @@ normal! zt
 normal! 0
 wincmd w
 argglobal
+edit lib/Net/CIDR/Set/IPv6.pm
+setlocal noautoindent
+setlocal nobinary
+setlocal bufhidden=
+setlocal buflisted
+setlocal buftype=
+setlocal cindent
+setlocal cinkeys=0{,0},0),:,!^F,o,O,e
+setlocal cinoptions=
+setlocal cinwords=if,else,while,do,for,switch
+setlocal comments=:#
+setlocal commentstring=#%s
+setlocal complete=.,w,b,u,t,i
+setlocal completefunc=
+setlocal nocopyindent
+setlocal nocursorcolumn
+setlocal nocursorline
+setlocal define=[^A-Za-z_]
+setlocal dictionary=
+setlocal nodiff
+setlocal equalprg=
+setlocal errorformat=
+setlocal expandtab
+if &filetype != 'perl'
+setlocal filetype=perl
+endif
+setlocal foldcolumn=0
+setlocal foldenable
+setlocal foldexpr=0
+setlocal foldignore=#
+set foldlevel=100
+setlocal foldlevel=100
+setlocal foldmarker={{{,}}}
+set foldmethod=indent
+setlocal foldmethod=indent
+setlocal foldminlines=1
+setlocal foldnestmax=20
+setlocal foldtext=foldtext()
+setlocal formatexpr=
+setlocal formatoptions=ocrq
+setlocal formatlistpat=^\\s*\\d\\+[\\]:.)}\\t\ ]\\s*
+setlocal grepprg=ack\ --type=perl
+setlocal iminsert=0
+setlocal imsearch=0
+setlocal include=\\<\\(use\\|require\\)\\>
+setlocal includeexpr=substitute(substitute(v:fname,'::','/','g'),'$','.pm','')
+setlocal indentexpr=GetPerlIndent()
+setlocal indentkeys=0{,0},:,0#,!^F,o,O,e,0=,0),0=or,0=and
+setlocal noinfercase
+setlocal iskeyword=@,48-57,_,192-255,:
+setlocal keywordprg=perldoc\ -f
+setlocal nolinebreak
+setlocal nolisp
+setlocal nolist
+setlocal makeprg=
+setlocal matchpairs=(:),{:},[:]
+setlocal modeline
+setlocal modifiable
+setlocal nrformats=octal,hex
+setlocal nonumber
+setlocal numberwidth=4
+setlocal omnifunc=
+setlocal path=/alt/local/lib/perl5/5.10.0/darwin-thread-multi-2level,/alt/local/lib/perl5/5.10.0,/alt/local/lib/perl5/site_perl/5.10.0/darwin-thread-multi-2level,/alt/local/lib/perl5/site_perl/5.10.0,,
+setlocal nopreserveindent
+setlocal nopreviewwindow
+setlocal quoteescape=\\
+setlocal noreadonly
+setlocal noscrollbind
+setlocal shiftwidth=2
+setlocal noshortname
+setlocal nosmartindent
+setlocal softtabstop=0
+setlocal nospell
+setlocal spellcapcheck=[.?!]\\_[\\])'\"\	\ ]\\+
+setlocal spellfile=
+setlocal spelllang=en
+setlocal statusline=
+setlocal suffixesadd=
+setlocal swapfile
+setlocal synmaxcol=3000
+if &syntax != 'perl'
+setlocal syntax=perl
+endif
+setlocal tabstop=2
+setlocal tags=./tags,./perltags,tags,perltags,~/.vim/perltags
+setlocal textwidth=72
+setlocal thesaurus=
+setlocal nowinfixheight
+setlocal nowinfixwidth
+setlocal wrap
+setlocal wrapmargin=0
+let s:l = 65 - ((19 * winheight(0) + 20) / 40)
+if s:l < 1 | let s:l = 1 | endif
+exe s:l
+normal! zt
+65
+normal! 02l
+wincmd w
+argglobal
 edit lib/Net/CIDR/Set.pm
 setlocal noautoindent
 setlocal nobinary
@@ -296,11 +406,11 @@ setlocal nowinfixheight
 setlocal nowinfixwidth
 setlocal wrap
 setlocal wrapmargin=0
-let s:l = 158 - ((6 * winheight(0) + 21) / 42)
+let s:l = 159 - ((0 * winheight(0) + 0) / 1)
 if s:l < 1 | let s:l = 1 | endif
 exe s:l
 normal! zt
-158
+159
 normal! 0
 wincmd w
 argglobal
@@ -449,6 +559,105 @@ normal! zt
 normal! 018l
 wincmd w
 argglobal
+edit t/ipv6.t
+setlocal noautoindent
+setlocal nobinary
+setlocal bufhidden=
+setlocal buflisted
+setlocal buftype=
+setlocal cindent
+setlocal cinkeys=0{,0},0),:,!^F,o,O,e
+setlocal cinoptions=
+setlocal cinwords=if,else,while,do,for,switch
+setlocal comments=:#
+setlocal commentstring=#%s
+setlocal complete=.,w,b,u,t,i
+setlocal completefunc=
+setlocal nocopyindent
+setlocal nocursorcolumn
+setlocal nocursorline
+setlocal define=[^A-Za-z_]
+setlocal dictionary=
+setlocal nodiff
+setlocal equalprg=
+setlocal errorformat=
+setlocal expandtab
+if &filetype != 'perl'
+setlocal filetype=perl
+endif
+setlocal foldcolumn=0
+setlocal foldenable
+setlocal foldexpr=0
+setlocal foldignore=#
+set foldlevel=100
+setlocal foldlevel=100
+setlocal foldmarker={{{,}}}
+set foldmethod=indent
+setlocal foldmethod=indent
+setlocal foldminlines=1
+setlocal foldnestmax=20
+setlocal foldtext=foldtext()
+setlocal formatexpr=
+setlocal formatoptions=ocrq
+setlocal formatlistpat=^\\s*\\d\\+[\\]:.)}\\t\ ]\\s*
+setlocal grepprg=ack\ --type=perl
+setlocal iminsert=0
+setlocal imsearch=0
+setlocal include=\\<\\(use\\|require\\)\\>
+setlocal includeexpr=substitute(substitute(v:fname,'::','/','g'),'$','.pm','')
+setlocal indentexpr=GetPerlIndent()
+setlocal indentkeys=0{,0},:,0#,!^F,o,O,e,0=,0),0=or,0=and
+setlocal noinfercase
+setlocal iskeyword=@,48-57,_,192-255,:
+setlocal keywordprg=perldoc\ -f
+setlocal nolinebreak
+setlocal nolisp
+setlocal nolist
+setlocal makeprg=
+setlocal matchpairs=(:),{:},[:]
+setlocal modeline
+setlocal modifiable
+setlocal nrformats=octal,hex
+setlocal nonumber
+setlocal numberwidth=4
+setlocal omnifunc=
+setlocal path=/alt/local/lib/perl5/5.10.0/darwin-thread-multi-2level,/alt/local/lib/perl5/5.10.0,/alt/local/lib/perl5/site_perl/5.10.0/darwin-thread-multi-2level,/alt/local/lib/perl5/site_perl/5.10.0,,
+setlocal nopreserveindent
+setlocal nopreviewwindow
+setlocal quoteescape=\\
+setlocal noreadonly
+setlocal noscrollbind
+setlocal shiftwidth=2
+setlocal noshortname
+setlocal nosmartindent
+setlocal softtabstop=0
+setlocal nospell
+setlocal spellcapcheck=[.?!]\\_[\\])'\"\	\ ]\\+
+setlocal spellfile=
+setlocal spelllang=en
+setlocal statusline=
+setlocal suffixesadd=
+setlocal swapfile
+setlocal synmaxcol=3000
+if &syntax != 'perl'
+setlocal syntax=perl
+endif
+setlocal tabstop=2
+setlocal tags=./tags,./perltags,tags,perltags,~/.vim/perltags
+setlocal textwidth=72
+setlocal thesaurus=
+setlocal nowinfixheight
+setlocal nowinfixwidth
+setlocal wrap
+setlocal wrapmargin=0
+let s:l = 4 - ((3 * winheight(0) + 20) / 40)
+if s:l < 1 | let s:l = 1 | endif
+exe s:l
+normal! zt
+4
+normal! 0
+wincmd w
+argglobal
 edit t/basic.t
 setlocal noautoindent
 setlocal nobinary
@@ -542,22 +751,26 @@ setlocal wrap
 setlocal wrapmargin=0
 9
 normal zo
-let s:l = 7 - ((5 * winheight(0) + 21) / 42)
+let s:l = 11 - ((0 * winheight(0) + 0) / 1)
 if s:l < 1 | let s:l = 1 | endif
 exe s:l
 normal! zt
-7
+11
 normal! 0
 wincmd w
-2wincmd w
+5wincmd w
 exe '1resize ' . ((&lines * 1 + 23) / 46)
 exe 'vert 1resize ' . ((&columns * 83 + 84) / 169)
-exe '2resize ' . ((&lines * 42 + 23) / 46)
+exe '2resize ' . ((&lines * 40 + 23) / 46)
 exe 'vert 2resize ' . ((&columns * 83 + 84) / 169)
 exe '3resize ' . ((&lines * 1 + 23) / 46)
-exe 'vert 3resize ' . ((&columns * 85 + 84) / 169)
-exe '4resize ' . ((&lines * 42 + 23) / 46)
+exe 'vert 3resize ' . ((&columns * 83 + 84) / 169)
+exe '4resize ' . ((&lines * 1 + 23) / 46)
 exe 'vert 4resize ' . ((&columns * 85 + 84) / 169)
+exe '5resize ' . ((&lines * 40 + 23) / 46)
+exe 'vert 5resize ' . ((&columns * 85 + 84) / 169)
+exe '6resize ' . ((&lines * 1 + 23) / 46)
+exe 'vert 6resize ' . ((&columns * 85 + 84) / 169)
 tabnext 1
 if exists('s:wipebuf')
   silent exe 'bwipe ' . s:wipebuf
