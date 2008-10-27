@@ -18,6 +18,15 @@ our $VERSION = '0.10';
 
 sub new { bless \my $x, shift }
 
+sub _pack_ipv4 {
+  my @nums = split /[.]/, shift, -1;
+  return unless @nums == 4;
+  for ( @nums ) {
+    return unless /^\d{1,3}$/ and $_ < 256;
+  }
+  return pack "CC*", 0, @nums;
+}
+
 sub _pack {
   my $ip = shift;
   return if $ip =~ /^:/ and $ip !~ s/^::/:/;
