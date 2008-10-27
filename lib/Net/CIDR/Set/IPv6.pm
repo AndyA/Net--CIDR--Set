@@ -29,6 +29,7 @@ sub _pack_ipv4 {
 
 sub _pack {
   my $ip = shift;
+  return pack( 'H*', '0' x 33 ) if $ip eq '::';
   return if $ip =~ /^:/ and $ip !~ s/^::/:/;
   return if $ip =~ /:$/ and $ip !~ s/::$/:/;
   my @nums = split /:/, $ip, -1;
