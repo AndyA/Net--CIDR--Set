@@ -69,14 +69,14 @@ if expand('%') == '' && !&modified && line('$') <= 1 && getline(1) == ''
   let s:wipebuf = bufnr('%')
 endif
 set shortmess=aoO
-badd +72 lib/Net/CIDR/Set.pm
+badd +170 lib/Net/CIDR/Set.pm
 badd +109 ~/Works/Perl/NotMine/Net-CIDR-Lite/Lite.pm
 badd +3 t/all-range.t
 badd +44 t/misc.t
 badd +10 andy/pack.pl
 badd +5 t/basic.t
 badd +28 t/string.t
-badd +1 lib/Net/CIDR/Set/IPv4.pm
+badd +36 lib/Net/CIDR/Set/IPv4.pm
 badd +41 lib/Net/CIDR/Set/IPv6.pm
 badd +91 t/private.t
 args lib/Net/CIDR/Set.pm
@@ -98,14 +98,14 @@ set nosplitbelow
 set nosplitright
 wincmd t
 set winheight=1 winwidth=1
-exe '1resize ' . ((&lines * 1 + 22) / 45)
-exe 'vert 1resize ' . ((&columns * 79 + 80) / 160)
-exe '2resize ' . ((&lines * 41 + 22) / 45)
-exe 'vert 2resize ' . ((&columns * 79 + 80) / 160)
-exe '3resize ' . ((&lines * 1 + 22) / 45)
-exe 'vert 3resize ' . ((&columns * 80 + 80) / 160)
-exe '4resize ' . ((&lines * 41 + 22) / 45)
-exe 'vert 4resize ' . ((&columns * 80 + 80) / 160)
+exe '1resize ' . ((&lines * 1 + 23) / 46)
+exe 'vert 1resize ' . ((&columns * 83 + 84) / 169)
+exe '2resize ' . ((&lines * 42 + 23) / 46)
+exe 'vert 2resize ' . ((&columns * 83 + 84) / 169)
+exe '3resize ' . ((&lines * 1 + 23) / 46)
+exe 'vert 3resize ' . ((&columns * 85 + 84) / 169)
+exe '4resize ' . ((&lines * 42 + 23) / 46)
+exe 'vert 4resize ' . ((&columns * 85 + 84) / 169)
 argglobal
 setlocal noautoindent
 setlocal nobinary
@@ -296,7 +296,7 @@ setlocal nowinfixheight
 setlocal nowinfixwidth
 setlocal wrap
 setlocal wrapmargin=0
-let s:l = 158 - ((6 * winheight(0) + 20) / 41)
+let s:l = 158 - ((6 * winheight(0) + 21) / 42)
 if s:l < 1 | let s:l = 1 | endif
 exe s:l
 normal! zt
@@ -413,13 +413,15 @@ normal zo
 normal zo
 58
 normal zo
+88
+normal zo
+88
+normal zo
 57
 normal zo
-95
+100
 normal zo
-96
-normal zo
-97
+101
 normal zo
 102
 normal zo
@@ -433,15 +435,11 @@ normal zo
 normal zo
 127
 normal zo
-96
+132
 normal zo
-133
+101
 normal zo
-134
-normal zo
-133
-normal zo
-95
+100
 normal zo
 let s:l = 104 - ((0 * winheight(0) + 0) / 1)
 if s:l < 1 | let s:l = 1 | endif
@@ -544,7 +542,7 @@ setlocal wrap
 setlocal wrapmargin=0
 9
 normal zo
-let s:l = 7 - ((5 * winheight(0) + 20) / 41)
+let s:l = 7 - ((5 * winheight(0) + 21) / 42)
 if s:l < 1 | let s:l = 1 | endif
 exe s:l
 normal! zt
@@ -552,14 +550,14 @@ normal! zt
 normal! 0
 wincmd w
 2wincmd w
-exe '1resize ' . ((&lines * 1 + 22) / 45)
-exe 'vert 1resize ' . ((&columns * 79 + 80) / 160)
-exe '2resize ' . ((&lines * 41 + 22) / 45)
-exe 'vert 2resize ' . ((&columns * 79 + 80) / 160)
-exe '3resize ' . ((&lines * 1 + 22) / 45)
-exe 'vert 3resize ' . ((&columns * 80 + 80) / 160)
-exe '4resize ' . ((&lines * 41 + 22) / 45)
-exe 'vert 4resize ' . ((&columns * 80 + 80) / 160)
+exe '1resize ' . ((&lines * 1 + 23) / 46)
+exe 'vert 1resize ' . ((&columns * 83 + 84) / 169)
+exe '2resize ' . ((&lines * 42 + 23) / 46)
+exe 'vert 2resize ' . ((&columns * 83 + 84) / 169)
+exe '3resize ' . ((&lines * 1 + 23) / 46)
+exe 'vert 3resize ' . ((&columns * 85 + 84) / 169)
+exe '4resize ' . ((&lines * 42 + 23) / 46)
+exe 'vert 4resize ' . ((&columns * 85 + 84) / 169)
 tabnext 1
 if exists('s:wipebuf')
   silent exe 'bwipe ' . s:wipebuf
