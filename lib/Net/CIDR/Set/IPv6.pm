@@ -18,7 +18,7 @@ our $VERSION = '0.10';
 
 sub new { bless \my $x, shift }
 
-sub _pack_ipv6 {
+sub _pack {
   my $ip = shift;
   return if $ip =~ /^:/ and $ip !~ s/^::/:/;
   return if $ip =~ /:$/ and $ip !~ s/::$/:/;
@@ -37,7 +37,7 @@ sub _pack_ipv6 {
   return pack( "H*", "00" . $str ) . $ipv4;
 }
 
-sub _unpack_ipv6 {
+sub _unpack {
   return _compress_ipv6(
     join( ":", unpack( "xH*", shift ) =~ /..../g ) );
 }
@@ -56,14 +56,64 @@ sub _compress_ipv6 {
   return $ip;
 }
 
+sub _width2bits {
+  my ( $width, $size ) = @_;
+  return pack 'B*',
+   ( '1' x ( $width + 8 ) ) . ( '0' x ( $size - $width ) );
+}
+
+sub _is_cidr {
+  my ( $lo, $hi ) = @_;
+  my $mask = ~( $lo ^ $hi );
+  my $bits = unpack 'B*', $mask;
+  return unless $bits =~ /^(1*)0*$/;
+  return length( $1 ) - 8;
+}
+
+sub _encode {
+  my ( $self, $ip ) = @_;
+  $DB::single = 1;
+  if ( $ip =~ m{^(.+?)/(.+)$} ) {
+    my $mask = $2;
+    return unless my $addr = _pack( $1 );
+    return unless my $bits = _width2bits( $mask, 128 );
+    return ( $addr & $bits, Net::CIDR::Set::_inc( $addr | ~$bits ) );
+  }
+  elsif ( $ip =~ m{^(.+?)-(.+)$} ) {
+    my ( $from, $to ) = ( $1, $2 );
+    return unless my $lo = _pack( $from );
+    return unless my $hi = _pack( $to );
+    return ( $lo, Net::CIDR::Set::_inc( $hi ) );
+  }
+  else {
+    return $self->_encode( "$ip/128" );
+  }
+}
+
 sub encode {
   my ( $self, $ip ) = @_;
-  confess "Can't do IPv6 yet";
+  my @r = $self->_encode( $ip )
+   or croak "Can't parse $ip as an IPv6 address";
+  return @r;
 }
 
 sub decode {
-  my ( $self, $lo, $hi ) = @_;
-  confess "Can't do IPv6 yet";
+  my $self    = shift;
+  my $lo      = shift;
+  my $hi      = Net::CIDR::Set::_dec( shift );
+  my $generic = shift || 0;
+  if ( $generic < 1 && $lo eq $hi ) {
+    # Single address
+    return _unpack( $lo );
+  }
+  elsif ( $generic < 2 && defined( my $w = _is_cidr( $lo, $hi ) ) ) {
+    # Valid CIDR range
+    return join '/', _unpack( $lo ), $w;
+  }
+  else {
+    # General range
+    return join '-', _unpack( $lo ), _unpack( $hi );
+  }
 }
 
 sub nbits { 128 }

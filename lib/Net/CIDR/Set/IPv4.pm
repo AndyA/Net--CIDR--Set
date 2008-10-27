@@ -54,8 +54,8 @@ sub _is_cidr {
 sub _encode {
   my ( $self, $ip ) = @_;
   if ( $ip =~ m{^(.+?)/(.+)$} ) {
-    return unless my $addr = _pack( $1 );
     my $mask = $2;
+    return unless my $addr = _pack( $1 );
     return
      unless my $bits
        = ( $mask =~ /^\d+$/ )
@@ -75,8 +75,9 @@ sub _encode {
 
 sub encode {
   my ( $self, $ip ) = @_;
-  return $self->_encode( $ip )
+  my @r = $self->_encode( $ip )
    or croak "Can't parse $ip as an IPv4 address";
+  return @r;
 }
 
 sub decode {

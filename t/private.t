@@ -68,8 +68,8 @@ use Net::CIDR::Set::IPv6;
       expect => [ [ 0, 192, 168, 0, 0 ], [ 0, 192, 169, 0, 0 ] ]
     },
     {
-      ip     => '192.168.0.0/0.0.255.255',
-      expect => []                           # error
+      ip    => '192.168.0.0/0.0.255.255',
+      error => qr{Can't parse}
     },
     {
       ip     => '0.0.0.0/0',
@@ -85,9 +85,14 @@ use Net::CIDR::Set::IPv6;
     },
   );
   for my $case ( @case ) {
-    my @got = map { [ unpack 'C*', $_ ] }
-     Net::CIDR::Set::IPv4->encode( $case->{ip} );
-    is_deeply [@got], $case->{expect}, "encode $case->{ip}";
+    my @enc = eval { Net::CIDR::Set::IPv4->encode( $case->{ip} ) };
+    if ( my $error = $case->{error} ) {
+      like $@, $error, 'error';
+    }
+    else {
+      my @got = map { [ unpack 'C*', $_ ] } @enc;
+      is_deeply [@got], $case->{expect}, "encode $case->{ip}";
+    }
   }
 }
 
