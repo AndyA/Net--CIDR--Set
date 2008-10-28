@@ -2,7 +2,7 @@
 
 use strict;
 use warnings;
-use Test::More tests => 3;
+use Test::More tests => 6;
 use Net::CIDR::Set;
 
 {
@@ -24,8 +24,15 @@ use Net::CIDR::Set;
   }, 'parsed';
   ok !$@, 'no error' or diag $@;
   my @r = $set->as_cidr_array( 1 );
-  use Data::Dumper;
-  print Dumper( [@r] );
+  is_deeply [@r],
+   [
+    '::/127',        '::ffff:0:0/96',
+    '2001::/32',     '2001:10::/28',
+    '2001:db8::/32', '2002::/16',
+    'fc00::/7',      'fe80::/9',
+    'ff00::/8'
+   ],
+   'correct data';
 }
 
 # vim:ts=2:sw=2:et:ft=perl
