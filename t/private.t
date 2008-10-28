@@ -2,7 +2,7 @@
 
 use strict;
 use warnings;
-use Test::More tests => 148;
+use Test::More tests => 150;
 use Net::CIDR::Set;
 use Net::CIDR::Set::IPv4;
 use Net::CIDR::Set::IPv6;
@@ -141,6 +141,12 @@ use Net::CIDR::Set::IPv6;
       $case->{generic} );
     is $got, $case->{expect}, "$got";
   }
+}
+
+{
+  is Net::CIDR::Set::_conjunction( or => 1, 2, 3 ), '1, 2 or 3',
+   '_conjunction';
+  is Net::CIDR::Set::_and( 1, 2, 3 ), '1, 2 and 3', '_and';
 }
 
 # vim:ts=2:sw=2:et:ft=perl

@@ -8,6 +8,8 @@ use Net::CIDR::Set::IPv6;
 
 use overload '""' => 'as_string';
 
+our $VERSION = '0.10';
+
 =head1 NAME
 
 Net::CIDR::Set - Manipulate sets of IP addresses
@@ -28,7 +30,7 @@ This document describes Net::CIDR::Set version 0.10
     }
   }
 
-=head2 DESCRIPTION
+=head1 DESCRIPTION
 
 C<Net::CIDR::Set> represents sets of IP addresses and allows standard
 set operations (union, intersection, membership test etc) to be
@@ -37,15 +39,45 @@ performed on them.
 In spite of the name it can work with sets consisting of arbitrary
 ranges of IP addresses - not just CIDR blocks.
 
+=head1 INTERFACE
+
+=head2 C<< new >>
+
+Create a new Net::CIDR::Set. All arguments are optional. May be passed a
+list of list of IP addresses (or ranges) which, if present, will be
+passed to C<add>.
+
+The first argument may be a hash reference which will be inspected for
+named options. Currently the only option that may be passed is C<type>
+which should be 'ipv4', 'ipv6' or the name of a coder class. See
+L<Net::CIDR::Set::IPv4> and L<Net::CIDR::Set::IPv6> for examples of
+coder classes.
+
 =cut
 
-our $VERSION = '0.10';
+{
+  my %type_map = (
+    ipv4 => 'Net::CIDR::Set::IPv4',
+    ipv6 => 'Net::CIDR::Set::IPv6',
+  );
 
-sub new {
-  my $class = shift;
-  my $self = bless { ranges => [] }, $class;
-  $self->add( @_ ) if @_;
-  return $self;
+  sub new {
+    my $self  = shift;
+    my $class = ref $self || $self;
+    my $set   = bless { ranges => [] }, $class;
+    my $opt   = 'HASH' eq ref $_[0] ? shift : {};
+    if ( defined( my $type = delete $opt->{type} ) ) {
+      my $coder_class = $type_map{$type} || $type;
+      $set->{coder} = $coder_class->new;
+    }
+    elsif ( ref $self ) {
+      $set->{coder} = $self->{coder};
+    }
+    my @unk = keys %$opt;
+    croak "Unknown options: ", _and( sort @unk ) if @unk;
+    $set->add( @_ ) if @_;
+    return $set;
+  }
 }
 
 # Return the index of the first element >= the supplied value. If the
@@ -122,10 +154,12 @@ sub _encode {
 }
 
 sub _conjunction {
-  my ( $self, $conj, @list ) = @_;
+  my ( $conj, @list ) = @_;
   my $last = pop @list;
   return join " $conj ", join( ', ', @list ), $last;
 }
+
+sub _and { _conjunction( 'and', @_ ) }
 
 sub _check_and_coerce {
   my ( $self, @others ) = @_;
@@ -136,13 +170,18 @@ sub _check_and_coerce {
 
   my @found = sort grep $_, keys %class;
 
-  croak "Can't mix ", $self->_conjunction( and => @found ),
-   " bit addresses"
+  croak "Can't mix ", _and( @found ), " bit addresses"
    if @found > 1;
 
   $self->{coder} ||= $class{ $found[0] };
   return $self;
 }
+
+=head2 C<< invert >>
+
+Invert (negate, complement) a set in-place.
+
+=cut
 
 sub invert {
   my $self = shift;
@@ -171,11 +210,9 @@ sub invert {
 }
 
 sub copy {
-  my $self  = shift;
-  my $class = ref $self;
-  my $copy  = $class->new;
+  my $self = shift;
+  my $copy = $self->new;
   @{ $copy->{ranges} } = @{ $self->{ranges} };
-  $copy->{coder} = $self->{coder};
   return $copy;
 }
 
@@ -192,7 +229,7 @@ sub _add_range {
 
 sub add {
   my ( $self, @addr ) = @_;
-  for my $ip ( @addr ) {
+  for my $ip ( map { split /\s*,\s*/ } @addr ) {
     my ( $lo, $hi ) = $self->_encode( $ip )
      or croak "Can't parse $ip";
     $self->_add_range( $lo, $hi );
