@@ -76,7 +76,7 @@ sub _encode {
 sub encode {
   my ( $self, $ip ) = @_;
   my @r = $self->_encode( $ip )
-   or croak "Can't parse $ip as an IPv4 address";
+   or croak "Can't decode $ip as an IPv4 address";
   return @r;
 }
 

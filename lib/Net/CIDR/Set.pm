@@ -231,7 +231,7 @@ sub add {
   my ( $self, @addr ) = @_;
   for my $ip ( map { split /\s*,\s*/ } @addr ) {
     my ( $lo, $hi ) = $self->_encode( $ip )
-     or croak "Can't parse $ip";
+     or croak "Can't decode $ip";
     $self->_add_range( $lo, $hi );
   }
 }
