@@ -69,7 +69,7 @@ use Net::CIDR::Set::IPv6;
     },
     {
       ip    => '192.168.0.0/0.0.255.255',
-      error => qr{Can't parse}
+      error => qr{Can't decode}
     },
     {
       ip     => '0.0.0.0/0',
