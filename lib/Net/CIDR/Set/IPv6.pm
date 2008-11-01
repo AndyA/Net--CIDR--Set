@@ -27,6 +27,29 @@ sub _pack_ipv4 {
   return pack "CC*", 0, @nums;
 }
 
+sub _426 {
+  my @nums = split /[.]/, shift, -1;
+  return if grep $_ > 255, @nums;
+  return join( ":", unpack( 'H*', pack 'C*', @nums ) =~ /..../g );
+}
+
+sub _pack2 {
+  my $ip = shift;
+  return pack( 'H*', '0' x 33 ) if $ip eq '::';
+  # Handle IPv4 suffix
+  $ip =~ s/(\d{1,3}(?:\.\d{1,3}){3})$/_426($1) or return/e;
+  return if $ip =~ /^:/ and $ip !~ s/^::/:/;
+  return if $ip =~ /:$/ and $ip !~ s/::$/:/;
+  my @part = split /:/, $ip, -1;
+  my $first = 0;
+  @part = map {
+    $_ eq ''
+     ? ( $first++ and return or ( 0 ) x ( 9 - @part ) )
+     : $_
+  } @part;
+  return @part;
+}
+
 sub _pack {
   my $ip = shift;
   return pack( 'H*', '0' x 33 ) if $ip eq '::';
