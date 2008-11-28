@@ -39,12 +39,20 @@ performed on them.
 In spite of the name it can work with sets consisting of arbitrary
 ranges of IP addresses - not just CIDR blocks.
 
+Both IPv4 and IPv6 addresses are handled - but they may not be mixed in
+the same set. You may explicitly set the personality of a set:
+
+  my $ip4set = Net::CIDR::Set->new({ type => 'ipv4 }, '10.0.0.0/8');
+
+Normally this isn't necessary - the set will guess its personality from
+the first data that is added to it.
+
 =head1 INTERFACE
 
 =head2 C<< new >>
 
 Create a new Net::CIDR::Set. All arguments are optional. May be passed a
-list of list of IP addresses (or ranges) which, if present, will be
+list of list of IP addresses or ranges which, if present, will be
 passed to C<add>.
 
 The first argument may be a hash reference which will be inspected for
@@ -181,6 +189,9 @@ sub _check_and_coerce {
 
 Invert (negate, complement) a set in-place.
 
+  my $set = Net::CIDR::Set->new;
+  $set->invert;
+
 =cut
 
 sub invert {
@@ -209,6 +220,14 @@ sub invert {
   }
 }
 
+=head2 C<< copy >>
+
+Make a deep copy of a set.
+
+  my $set2 = $set->copy;
+
+=cut
+
 sub copy {
   my $self = shift;
   my $copy = $self->new;
@@ -227,6 +246,21 @@ sub _add_range {
   splice @{ $self->{ranges} }, $fpos, $tpos - $fpos, ( $from, $to );
 }
 
+=head2 C<< add >>
+
+Add a number of addresses or ranges to a set.
+
+  $set->add(
+    '10.0.0.0/8', 
+    '192.168.0.32-192.168.0.63', 
+    '127.0.0.1'
+  );
+
+It is legal to add ranges that overlap with each other and/or with the
+ranges already in the set. Overlapping ranges are merged.
+
+=cut
+
 sub add {
   my ( $self, @addr ) = @_;
   for my $ip ( map { split /\s*,\s*/ } @addr ) {
@@ -236,6 +270,20 @@ sub add {
   }
 }
 
+=head2 C<< remove >>
+
+Remove a number of addresses or ranges from a set.
+
+  $set->remove(
+    '8.8.0.0/16',
+    '158.152.1.58'
+  );
+
+There is no requirement that the addresses being removed be members
+of the set.
+
+=cut
+
 sub remove {
   my $self = shift;
 
@@ -244,18 +292,73 @@ sub remove {
   $self->invert;
 }
 
-*contains = *contains_all;
+=head2 C<< merge >>
 
-sub contains_any {
-  my $self  = shift;
-  my $class = ref $self;
-  return !$class->new( @_ )->intersection( $self )->is_empty;
+Merge the contents of other sets into this set.
+
+  $set = Net::CIDR::Set->new;
+  $set->merge($s1, $s2);
+
+=cut
+
+sub merge {
+  my $self = shift;
+  $self->_check_and_coerce( @_ );
+
+  # TODO: This isn't very efficient - and merge gets called from all
+  # sorts of other places.
+  for my $other ( @_ ) {
+    my $iter = $other->_iterate_runs;
+    while ( my ( $from, $to ) = $iter->() ) {
+      $self->_add_range( $from, $to );
+    }
+  }
 }
+
+=head2 C<< contains >>
+
+A synonmym for C<contains_all>.
+
+=head2 C<< contains_all >>
+
+Return true if the set contains all of the supplied addresses.
+Given this set:
+
+  my $set = Net::CIDR::Set->new('244.188.12.0/8');
+
+this condition is true:
+
+  if ( $set->contains_all('244.188.12.128/3') ) {
+    # ...
+  }
+
+while this condition is false:
+
+  if ( $set->contains_all('244.188.12.0/12') ) {
+    # ...
+  }
+
+=cut
+
+*contains = *contains_all;
 
 sub contains_all {
   my $self  = shift;
   my $class = ref $self;
   return $class->new( @_ )->subset( $self );
+}
+
+=head2 C<< contains_any >>
+
+Return true if there is any overlap between the supplied
+addresses/ranges and the contents of the set.
+
+=cut
+
+sub contains_any {
+  my $self  = shift;
+  my $class = ref $self;
+  return !$class->new( @_ )->intersection( $self )->is_empty;
 }
 
 sub _iterate_runs {
@@ -272,99 +375,17 @@ sub _iterate_runs {
   };
 }
 
-sub iterate_addresses {
-  my ( $self, @args ) = @_;
-  my $iter = $self->_iterate_runs;
-  my @r    = ();
-  return sub {
-    while ( 1 ) {
-      @r = $iter->() or return unless @r;
-      return $self->_decode( ( my $last, $r[0] )
-        = ( $r[0], _inc( $r[0] ) ), @args )
-       unless $r[0] eq $r[1];
-      @r = ();
-    }
-  };
-}
-
-sub iterate_cidr {
-  my ( $self, @args ) = @_;
-  my $iter = $self->_iterate_runs;
-  my $size = $self->_nbits;
-  my @r    = ();
-  return sub {
-    while ( 1 ) {
-      @r = $iter->() or return unless @r;
-      unless ( $r[0] eq $r[1] ) {
-        ( my $bits = unpack 'B*', $r[0] ) =~ /(0*)$/;
-        my $pad = length $1;
-        $pad = $size if $pad > $size;
-        while ( 1 ) {
-          my $next = _inc( $r[0] | pack 'B*',
-            ( '0' x ( length( $bits ) - $pad ) ) . ( '1' x $pad ) );
-          return $self->_decode( ( my $last, $r[0] ) = ( $r[0], $next ),
-            @args )
-           if $next le $r[1];
-          $pad--;
-        }
-      }
-      @r = ();
-    }
-  };
-}
-
-sub iterate_ranges {
-  my ( $self, @args ) = @_;
-  my $iter = $self->_iterate_runs;
-  return sub {
-    return unless my @r = $iter->();
-    return $self->_decode( @r, @args );
-  };
-}
-
-sub as_array {
-  my ( $self, $iter ) = @_;
-  my @addr = ();
-  while ( my $addr = $iter->() ) {
-    push @addr, $addr;
-  }
-  return @addr;
-}
-
-sub as_address_array {
-  my $self = shift;
-  return $self->as_array( $self->iterate_addresses( @_ ) );
-}
-
-sub as_cidr_array {
-  my $self = shift;
-  return $self->as_array( $self->iterate_cidr( @_ ) );
-}
-
-sub as_range_array {
-  my $self = shift;
-  return $self->as_array( $self->iterate_ranges( @_ ) );
-}
-
-sub as_string { join ', ', shift->as_range_array( @_ ) }
-
-sub merge {
-  my $self = shift;
-  $self->_check_and_coerce( @_ );
-
-  # TODO: This isn't very efficient - and merge gets called from all
-  # sorts of other places.
-  for my $other ( @_ ) {
-    my $iter = $other->_iterate_runs;
-    while ( my ( $from, $to ) = $iter->() ) {
-      $self->_add_range( $from, $to );
-    }
-  }
-}
-
 sub compliment {
   croak "That's very kind of you - but I expect you meant complement";
 }
+
+=head2 C<< complement >>
+
+Return a new set that is the complement of this set.
+
+  my $inv = $set->complement;
+
+=cut
 
 sub complement {
   my $new = shift->copy;
@@ -373,11 +394,29 @@ sub complement {
   return $new;
 }
 
+=head2 C<< union >>
+
+Return a new set that is the union of a number of sets. This is
+equivalent to a logical OR between sets.
+
+  my $everything = $east->union($west);
+
+=cut
+
 sub union {
   my $new = shift->copy;
   $new->merge( @_ );
   return $new;
 }
+
+=head2 C<< intersection >>
+
+Return a new set that is the intersection of a number of sets. This is
+equivalent to a logical AND between sets.
+
+  my $overlap = $north->intersection($south);
+
+=cut
 
 sub intersection {
   my $self  = shift;
@@ -388,11 +427,31 @@ sub intersection {
   return $new;
 }
 
+=head2 C<< xor >>
+
+Return a new set that is the exclusive-or of existing sets.
+
+  my $xset = $this->xor($that);
+
+The resulting set will contain all addresses that are members of one set
+but not the other.
+
+=cut
+
 sub xor {
   my $self = shift;
   return $self->union( @_ )
    ->intersection( $self->intersection( @_ )->complement );
 }
+
+=head2 C<< diff >>
+
+Return a new set containing all the addresses that are present in this
+set but not another.
+
+  my $diff = $this->diff($that);
+
+=cut
 
 sub diff {
   my $self  = shift;
@@ -400,21 +459,53 @@ sub diff {
   return $self->intersection( $other->union( @_ )->complement );
 }
 
+=head2 C<< is_empty >>
+
+Return a true value if the set is empty.
+
+  if ( $set->is_empty ) {
+    print "Nothing there!\n";
+  }
+
+=cut
+
 sub is_empty {
   my $self = shift;
   return @{ $self->{ranges} } == 0;
 }
+
+=head2 C<< superset >>
+
+Return true if this set is a superset of the supplied set.
+
+=cut
 
 sub superset {
   my $other = pop;
   return $other->subset( reverse( @_ ) );
 }
 
+=head2 C<< subset >>
+
+Return true if this set is a subset of the supplied set.
+
+=cut
+
 sub subset {
   my $self = shift;
   my $other = shift || croak "I need two sets to compare";
   return $self->equals( $self->intersection( $other ) );
 }
+
+=head2 C<< equals >>
+
+Return true if this set is identical to another set.
+
+  if ( $set->equals($foo) ) {
+    print "We have the same addresses.\n";
+  }
+
+=cut
 
 sub equals {
   return unless @_;
@@ -442,6 +533,246 @@ sub equals {
 
   return 1;
 }
+
+=head1 Retrieving Set Contents
+
+The following methods allow the contents of a set to be retrieved in
+various representations. Each of the following methods accepts an
+optional numeric argument that controls the formatting of the returned
+addresses. It may take one of the following values:
+
+=over
+
+=item C<0>
+
+Format each range of addresses as compactly as possible. If the range
+contains only a single address format it as such. If it can be
+represented as a single CIDR block use CIDR representation (<ip>/<mask>)
+otherwise format it as an arbitrary range (<start>-<end>).
+
+=item C<1>
+
+Always format as either a CIDR block or an arbitrary range even if the
+range is just a single address.
+
+=item C<2>
+
+Always use arbitrary range format (<start>-<end>) even if the range is a
+single address or a legal CIDR block.
+
+=back
+
+Here's an example of the different formatting options:
+
+  my $set = Net::CIDR::Set->new( '127.0.0.1', '192.168.37.0/24',
+    '10.0.0.11-10.0.0.17' );
+
+  for my $fmt ( 0 .. 2 ) {
+    print "Using format $fmt:\n";
+    print "  $_\n" for $set->as_range_array( $fmt );
+  }
+
+And here's the output from that code:
+
+  Using format 0:
+    10.0.0.11-10.0.0.17
+    127.0.0.1
+    192.168.37.0/24
+  Using format 1:
+    10.0.0.11-10.0.0.17
+    127.0.0.1/32
+    192.168.37.0/24
+  Using format 2:
+    10.0.0.11-10.0.0.17
+    127.0.0.1-127.0.0.1
+    192.168.37.0-192.168.37.255
+
+Note that this option never affects the addresses that are returned;
+only how they are formatted.
+
+For most purposes the formatting argument can be omitted; it's default
+value is C<0> which provides the most general formatting.
+
+=head2 C<< iterate_addresses >>
+
+Return an iterator (a closure) that will return each of the addresses in
+the set in ascending order. This code
+
+  my $set = Net::CIDR::Set->new('192.168.37.0/24');
+  my $iter = $set->iterate_addresses;
+  while ( my $ip = $iter->() ) {
+    print "Got $ip\n";
+  }
+
+outputs 256 distinct addresses from 192.168.37.0 to 192.168.27.255.
+
+=cut
+
+sub iterate_addresses {
+  my ( $self, @args ) = @_;
+  my $iter = $self->_iterate_runs;
+  my @r    = ();
+  return sub {
+    while ( 1 ) {
+      @r = $iter->() or return unless @r;
+      return $self->_decode( ( my $last, $r[0] )
+        = ( $r[0], _inc( $r[0] ) ), @args )
+       unless $r[0] eq $r[1];
+      @r = ();
+    }
+  };
+}
+
+=head2 C<< iterate_cidr >>
+
+Return an iterator (a closure) that will return each of the CIDR blocks
+in the set in ascending order. This code
+
+  my $set = Net::CIDR::Set->new('192.168.37.9-192.168.37.134');
+  my $iter = $set->iterate_cidr;
+  while ( my $cidr = $iter->() ) {
+    print "Got $cidr\n";
+  }
+
+outputs
+
+  Got 192.168.37.9
+  Got 192.168.37.10/31
+  Got 192.168.37.12/30
+  Got 192.168.37.16/28
+  Got 192.168.37.32/27
+  Got 192.168.37.64/26
+  Got 192.168.37.128/30
+  Got 192.168.37.132/31
+  Got 192.168.37.134
+
+This is the most compact CIDR representation of the set because its
+limits don't fall on convenient CIDR boundaries.
+
+=cut
+
+sub iterate_cidr {
+  my ( $self, @args ) = @_;
+  my $iter = $self->_iterate_runs;
+  my $size = $self->_nbits;
+  my @r    = ();
+  return sub {
+    while ( 1 ) {
+      @r = $iter->() or return unless @r;
+      unless ( $r[0] eq $r[1] ) {
+        ( my $bits = unpack 'B*', $r[0] ) =~ /(0*)$/;
+        my $pad = length $1;
+        $pad = $size if $pad > $size;
+        while ( 1 ) {
+          my $next = _inc( $r[0] | pack 'B*',
+            ( '0' x ( length( $bits ) - $pad ) ) . ( '1' x $pad ) );
+          return $self->_decode( ( my $last, $r[0] ) = ( $r[0], $next ),
+            @args )
+           if $next le $r[1];
+          $pad--;
+        }
+      }
+      @r = ();
+    }
+  };
+}
+
+=head2 C<< iterate_ranges >>
+
+Return an iterator (a closure) that will return each of the ranges
+in the set in ascending order. This code
+
+  my $set = Net::CIDR::Set->new(
+    '192.168.37.9-192.168.37.134',
+    '127.0.0.1',
+    '10.0.0.0/8' 
+  );
+  my $iter = $set->iterate_ranges;
+  while ( my $range = $iter->() ) {
+    print "Got $range\n";
+  }
+
+outputs
+
+  Got 10.0.0.0/8
+  Got 127.0.0.1
+  Got 192.168.37.9-192.168.37.134
+
+=cut
+
+sub iterate_ranges {
+  my ( $self, @args ) = @_;
+  my $iter = $self->_iterate_runs;
+  return sub {
+    return unless my @r = $iter->();
+    return $self->_decode( @r, @args );
+  };
+}
+
+=head2 C<< as_array >>
+
+Convenience method that gathers all of the output from one of the
+iterators above into an array.
+
+  my @ranges = $set->as_array( $set->iterate_ranges );
+
+Normally you will use one of C<as_address_array>, C<as_cidr_array> or
+C<as_range_array> instead.
+
+=cut
+
+sub as_array {
+  my ( $self, $iter ) = @_;
+  my @addr = ();
+  while ( my $addr = $iter->() ) {
+    push @addr, $addr;
+  }
+  return @addr;
+}
+
+=head2 C<< as_address_array >>
+
+Return an array containing all of the distinct addresses in a set. Note
+that this may very easily create a very large array. At the time of
+writing it is, for example, unlikely that you have enough memory for an
+array containing all of the possible IPv6 addresses...
+
+=cut
+
+sub as_address_array {
+  my $self = shift;
+  return $self->as_array( $self->iterate_addresses( @_ ) );
+}
+
+=head2 C<< as_cidr_array >>
+
+Return an array containing all of the distinct CIDR blocks in a set.
+
+=cut
+
+sub as_cidr_array {
+  my $self = shift;
+  return $self->as_array( $self->iterate_cidr( @_ ) );
+}
+
+=head2 C<< as_range_array >>
+
+Return an array containing all of the ranges in a set.
+
+=cut
+
+sub as_range_array {
+  my $self = shift;
+  return $self->as_array( $self->iterate_ranges( @_ ) );
+}
+
+=head2 C<< as_string >>
+
+Return a compact string representation of a set.
+
+=cut
+
+sub as_string { join ', ', shift->as_range_array( @_ ) }
 
 1;
 
