@@ -10,6 +10,7 @@ README
 t/00-load.t
 t/basic.t
 t/ipv6.t
+t/misc.t
 t/operations.t
 t/pod.t
 t/private.t

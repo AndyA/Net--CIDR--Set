@@ -68,3 +68,5 @@
 ^cover_db
 ^try[.]store$
 ^\.prove$
+^tags$
+^perltags$
