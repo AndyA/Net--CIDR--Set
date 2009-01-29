@@ -3,3 +3,6 @@ Revision history for Net-CIDR-Set
 2009-01-29 0.10
   - Initial release
  
+2009-01-29 0.11
+  - Remove broken cidrcalc
+ 

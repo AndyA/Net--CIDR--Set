@@ -13,7 +13,6 @@ my $builder = MyBuilder->new(
   dist_version_from => 'lib/Net/CIDR/Set.pm',
   requires          => { 'Test::More' => 0 },
   add_to_cleanup    => ['Net-CIDR-Set-*'],
-  script_files      => ['bin/cidrcalc'],
 );
 
 $builder->create_build_script();
