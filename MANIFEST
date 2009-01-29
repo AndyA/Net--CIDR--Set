@@ -14,3 +14,4 @@ t/misc.t
 t/operations.t
 t/pod.t
 t/private.t
+META.yml
