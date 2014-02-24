@@ -82,6 +82,7 @@ sub _is_cidr {
   my ( $lo, $hi ) = @_;
   my $mask = ~( $lo ^ $hi );
   my $bits = unpack 'B*', $mask;
+  return unless $hi eq ($lo | $hi);
   return unless $bits =~ /^(1*)0*$/;
   return length( $1 ) - 8;
 }
