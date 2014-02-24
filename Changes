@@ -9,3 +9,6 @@ Revision history for Net-CIDR-Set
 0.12  2009-05-29
       - Move to GitHub 
 
+0.13  2014-02-24
+      - Applied Brian Gottreu's fix for
+        https://rt.cpan.org/Public/Bug/Display.html?id=49632
